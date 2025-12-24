@@ -1,0 +1,66 @@
+<section class="pb-8" data-testid="activity-page">
+    <h1 class="text-sm font-medium text-white/40 uppercase tracking-widest" data-testid="page-title">Activity</h1>
+
+    <% if ((orders ?? []).length===0) { %>
+        <div class="mt-12 py-16 text-center" data-testid="empty-state">
+            <div class="text-base text-white/40">No activity yet</div>
+        </div>
+        <% } else { %>
+            <div class="mt-8 space-y-6" data-testid="orders">
+                <% orders.forEach((o)=> { %>
+                    <% const statusLabel=o.status==='confirmed' ? 'Sold' : (o.status==='pending' ? 'Pending' : o.status)
+                        %>
+                        <% const createdHuman=o.created_at ? new Date(o.created_at * 1000).toLocaleDateString('en-US', {
+                            year: 'numeric' , month: 'short' , day: 'numeric' , timeZone: 'UTC' }) : '' %>
+                            <div class="flex items-start gap-5" data-testid="order-row">
+                                <a class="block shrink-0"
+                                    href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>"
+                                    data-testid="order-thumb-link">
+                                    <div class="relative h-16 w-16 overflow-hidden rounded-lg bg-[#111113] <%= (o.status === 'pending' || o.status === 'confirmed') ? 'opacity-50' : '' %>"
+                                        data-controller="image" data-testid="order-thumb">
+                                        <div class="absolute inset-0 img-placeholder" data-image-target="skeleton">
+                                        </div>
+                                        <iframe
+                                            src="https://ordinals.com/preview/<%= encodeURIComponent(o.inscription_id) %>"
+                                            class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-300"
+                                            loading="lazy" data-image-target="media"
+                                            data-action="load->image#loaded error->image#error"
+                                            data-testid="order-thumb-media"></iframe>
+                                    </div>
+                                </a>
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <a class="text-sm text-white/80 hover:text-white transition-colors truncate"
+                                            href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>"
+                                            data-testid="order-inscription-link">
+                                            <%= o.collection_slug %>
+                                        </a>
+                                        <span class="text-xs text-white/40" data-testid="order-status">
+                                            <%= statusLabel %>
+                                        </span>
+                                    </div>
+                                    <div class="mt-2 flex items-center gap-4 text-sm text-white/40"
+                                        data-testid="order-meta">
+                                        <% if (o.price_sats) { %>
+                                            <span class="price" data-testid="order-price">
+                                                <%= formatSats(o.price_sats) %>
+                                            </span>
+                                            <% } %>
+                                                <% if (createdHuman) { %>
+                                                    <span data-testid="order-created">
+                                                        <%= createdHuman %>
+                                                    </span>
+                                                    <% } %>
+                                    </div>
+                                    <% if (o.txid) { %>
+                                        <a class="mt-2 inline-block text-sm text-white/30 hover:text-white/50 transition-colors"
+                                            href="https://mempool.space/tx/<%= encodeURIComponent(o.txid) %>"
+                                            target="_blank" rel="noopener" data-testid="order-tx-link">View tx →</a>
+                                        <% } %>
+                                </div>
+                            </div>
+                            <% }) %>
+            </div>
+            <% } %>
+</section>

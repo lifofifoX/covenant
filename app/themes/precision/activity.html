@@ -1,0 +1,85 @@
+<div class="min-h-full font-mono">
+    <!-- Header with Filters/Stats -->
+    <div
+        class="sticky top-0 z-30 bg-black/95 backdrop-blur border-b border-[#333] flex items-center justify-between px-6 py-4">
+        <div class="text-sm font-bold">ACTIVITY_LOG</div>
+        <div class="text-xs text-[#666]">Monitoring real-time transactions</div>
+    </div>
+
+    <% if ((orders ?? []).length===0) { %>
+        <div class="flex flex-col items-center justify-center h-[50vh] text-[#444]">
+            <div class="text-4xl mb-4 grayscale opacity-20">cmd_bg</div>
+            <div class="text-xs uppercase tracking-widest">No_Data_Found</div>
+        </div>
+        <% } else { %>
+            <!-- Data Table -->
+            <div class="w-full text-left border-collapse">
+                <!-- Table Header -->
+                <div
+                    class="grid grid-cols-12 gap-0 border-b border-[#333] bg-[#050505] text-[10px] uppercase tracking-wider text-[#666] sticky top-[53px] z-20">
+                    <div class="col-span-2 px-6 py-3 border-r border-[#222]">Type</div>
+                    <div class="col-span-4 px-6 py-3 border-r border-[#222]">Inscription</div>
+                    <div class="col-span-2 px-6 py-3 border-r border-[#222] text-right">Value</div>
+                    <div class="col-span-2 px-6 py-3 border-r border-[#222]">Time</div>
+                    <div class="col-span-2 px-6 py-3">Hash</div>
+                </div>
+
+                <!-- Rows -->
+                <% orders.forEach((o, i)=> { %>
+                    <% const isSold=o.status==='confirmed' %>
+                        <% const isPending=o.status==='pending' %>
+
+                            <div
+                                class="grid grid-cols-12 gap-0 border-b border-[#222] hover:bg-[#0a0a0a] transition-colors group text-xs text-[#aaa]">
+                                <!-- Status -->
+                                <div class="col-span-2 px-6 py-4 border-r border-[#222] flex items-center gap-2">
+                                    <% if (isSold) { %>
+                                        <span class="text-green-500 font-bold">SOLD</span>
+                                        <% } else if (isPending) { %>
+                                            <span class="text-orange-500 animate-pulse">PENDING</span>
+                                            <% } else { %>
+                                                <span>
+                                                    <%= o.status %>
+                                                </span>
+                                                <% } %>
+                                </div>
+
+                                <!-- Inscription -->
+                                <div class="col-span-4 px-6 py-4 border-r border-[#222] truncate text-white">
+                                    <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>"
+                                        class="hover:text-blue-500 underline decoration-dotted underline-offset-4">
+                                        <%= o.inscription_id %>
+                                    </a>
+                                    <div class="text-[10px] text-[#444] mt-1">
+                                        <%= o.collection_slug %>
+                                    </div>
+                                </div>
+
+                                <!-- Price -->
+                                <div
+                                    class="col-span-2 px-6 py-4 border-r border-[#222] text-right font-mono text-white">
+                                    <%= formatSats(o.price_sats) %>
+                                </div>
+
+                                <!-- Date -->
+                                <div class="col-span-2 px-6 py-4 border-r border-[#222] text-[#666]">
+                                    <%= o.created_at ? new Date(o.created_at * 1000).toISOString().split('T')[0] : '--'
+                                        %>
+                                </div>
+
+                                <!-- TX -->
+                                <div class="col-span-2 px-6 py-4 font-mono">
+                                    <% if (o.txid) { %>
+                                        <a href="https://mempool.space/tx/<%= o.txid %>" target="_blank"
+                                            class="text-blue-600 hover:text-white truncate block">
+                                            <%= o.txid.substring(0, 8) %>...
+                                        </a>
+                                        <% } else { %>
+                                            <span class="text-[#333]">-</span>
+                                            <% } %>
+                                </div>
+                            </div>
+                            <% }) %>
+            </div>
+            <% } %>
+</div>

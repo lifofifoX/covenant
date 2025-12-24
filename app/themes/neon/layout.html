@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+        <%= title %>
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="<%= assets.css %>" />
+    <script type="module" src="<%= assets.js %>"></script>
+</head>
+
+<body data-controller="store body-class usd"
+    data-action="wallet:connected@window->body-class#setConnected wallet:disconnected@window->body-class#setDisconnected"
+    class="theme-neon min-h-screen antialiased" style="background: #050510; background-image:
+      radial-gradient(ellipse 100% 80% at 50% -30%, rgba(0, 240, 255, 0.12), transparent),
+      radial-gradient(ellipse 60% 50% at 0% 50%, rgba(255, 0, 229, 0.08), transparent),
+      radial-gradient(ellipse 60% 50% at 100% 80%, rgba(200, 255, 0, 0.05), transparent);">
+    <div class="mx-auto w-full max-w-6xl px-6 pb-24 pt-8">
+        <!-- Header -->
+        <header class="relative z-20 flex items-center justify-between gap-6" data-testid="topbar">
+            <div class="flex min-w-0 items-center gap-5">
+                <a href="/" class="group relative h-12 w-12 overflow-hidden rounded-xl neon-border-cyan"
+                    aria-label="Home" data-testid="home-link">
+                    <img src="<%= CONFIG.artist_avatar_url %>" alt="" class="block h-full w-full object-cover" />
+                </a>
+                <a href="/" class="block" data-testid="brand-home-link">
+                    <h1 class="text-lg font-bold tracking-tight text-white" data-testid="brand-title">
+                        <%= CONFIG.artist_name %>
+                    </h1>
+                </a>
+            </div>
+
+            <nav class="hidden items-center gap-10 text-sm font-medium md:flex" data-testid="header-nav">
+                <a class="neon-nav-link" href="/" data-testid="nav-home">Home</a>
+                <a class="neon-nav-link" href="/activity" data-testid="nav-activity">Activity</a>
+                <a class="neon-nav-link" href="/policy" data-testid="nav-policy">Policy</a>
+            </nav>
+
+            <div class="flex items-center gap-4" data-testid="header-right">
+                <div data-controller="wallet" data-testid="connect-slot"
+                    data-action="keydown.esc@window->wallet#close mouseup@document->wallet#closeIfClickedOutside">
+                    <div data-wallet-target="selector"
+                        class="fixed bottom-0 right-0 z-40 w-full neon-bg-animated border-t border-[#00f0ff]/30 transition-transform duration-300 translate-y-full data-[state=open]:translate-y-0 md:top-0 md:h-screen md:w-[420px] md:border-l md:border-t-0 md:translate-y-0 md:translate-x-full md:data-[state=open]:translate-x-0"
+                        style="background-color: rgba(5, 5, 16, 0.98);" data-state="closed">
+                        <div class="mx-auto mt-3 h-1 w-12 rounded-full bg-[#00f0ff]/30 md:hidden"
+                            data-action="click->wallet#close"></div>
+                        <div class="p-8">
+                            <div class="flex items-center justify-between">
+                                <span class="text-base font-semibold neon-text-cyan">Connect Wallet</span>
+                                <button class="text-white/50 hover:neon-text-magenta transition-colors" type="button"
+                                    aria-label="Close" data-action="wallet#close">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-8 space-y-4">
+                                <button
+                                    class="flex w-full items-center gap-4 rounded-xl neon-card px-5 py-4 text-sm font-medium text-white hover:neon-text-cyan transition-all"
+                                    data-wallet-target="xverse" data-action="wallet#authorize:prevent"
+                                    data-wallet-provider-param="xverse">
+                                    <img src="/wallets/xverse.svg" class="h-6 w-6" alt="" />
+                                    <span>Xverse</span>
+                                </button>
+                                <button
+                                    class="flex w-full items-center gap-4 rounded-xl neon-card px-5 py-4 text-sm font-medium text-white hover:neon-text-cyan transition-all"
+                                    data-wallet-target="unisat" data-action="wallet#authorize:prevent"
+                                    data-wallet-provider-param="unisat">
+                                    <img src="/wallets/unisat.png" class="h-6 w-6" alt="" />
+                                    <span>Unisat</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hide-on-connected">
+                        <button class="btn-neon rounded-xl px-6 py-2.5 text-sm"
+                            data-action="wallet#select">Connect</button>
+                    </div>
+
+                    <div class="show-on-connected">
+                        <div class="relative" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+                            <button
+                                class="flex items-center gap-2 rounded-xl neon-border-cyan px-4 py-2.5 text-sm neon-text-cyan"
+                                data-action="dropdown#toggle">
+                                <span data-wallet-target="addressPreview"></span>
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                    <path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5"
+                                        stroke-linecap="round" />
+                                </svg>
+                            </button>
+                            <div class="absolute right-0 top-full z-50 mt-2 hidden w-48 rounded-xl neon-border-magenta p-2"
+                                style="background: rgba(5, 5, 16, 0.95);" data-dropdown-target="menu">
+                                <a class="block rounded-lg px-4 py-2.5 text-sm neon-text-magenta hover:bg-[#ff00e5]/10 transition-colors"
+                                    href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative md:hidden" data-controller="dropdown" data-action="mouseup@window->dropdown#hide"
+                    data-testid="nav-menu">
+                    <button
+                        class="flex h-10 w-10 items-center justify-center rounded-xl neon-card text-white/70 hover:neon-text-cyan transition-colors"
+                        type="button" aria-label="Menu" data-action="dropdown#toggle" data-testid="nav-menu-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" />
+                        </svg>
+                    </button>
+                    <div class="absolute right-0 top-full z-50 mt-2 hidden w-48 rounded-xl neon-border-cyan p-2"
+                        style="background: rgba(5, 5, 16, 0.95);" data-dropdown-target="menu"
+                        data-testid="nav-menu-list">
+                        <a class="block rounded-lg px-4 py-2.5 text-sm text-white/70 hover:neon-text-cyan hover:bg-[#00f0ff]/10 transition-colors"
+                            href="/" data-testid="nav-menu-home">Home</a>
+                        <a class="block rounded-lg px-4 py-2.5 text-sm text-white/70 hover:neon-text-cyan hover:bg-[#00f0ff]/10 transition-colors"
+                            href="/activity" data-testid="nav-menu-activity">Activity</a>
+                        <a class="block rounded-lg px-4 py-2.5 text-sm text-white/70 hover:neon-text-cyan hover:bg-[#00f0ff]/10 transition-colors"
+                            href="/policy" data-testid="nav-menu-policy">Policy</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="mt-10" data-store-target="main">
+            <%- body %>
+        </main>
+
+        <footer
+            class="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-white/[0.05] pt-8 text-sm"
+            data-testid="footer">
+            <div class="text-white/40" data-testid="footer-brand">
+                <span>Powered by </span>
+                <a class="neon-text-cyan hover:text-[#00f0ff] transition-colors"
+                    href="https://github.com/lifofifoX/codex" target="_blank" rel="noopener">CODEX</a>
+                <span class="mx-2 text-white/20">·</span>
+                <a class="neon-text-magenta hover:text-[#ff00e5] transition-colors" href="https://wizards.art/"
+                    target="_blank" rel="noopener">Wizards of Ord</a>
+            </div>
+            <div class="flex items-center gap-3" data-testid="social">
+                <a class="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 hover:neon-text-cyan transition-colors"
+                    href="https://wizards.art/" aria-label="Website" target="_blank" rel="noopener">🌐</a>
+                <a class="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 hover:neon-text-magenta transition-colors"
+                    href="https://x.com/TheWizardsOfOrd" aria-label="X" target="_blank" rel="noopener">𝕏</a>
+                <a class="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 hover:neon-text-lime transition-colors"
+                    href="https://github.com/TheWizardsOfOrd" aria-label="GitHub" target="_blank" rel="noopener">🐙</a>
+            </div>
+        </footer>
+    </div>
+</body>
+
+</html>

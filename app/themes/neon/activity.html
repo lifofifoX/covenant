@@ -1,0 +1,93 @@
+<section class="pb-8" data-testid="activity-page">
+    <h1 class="text-sm font-semibold uppercase tracking-widest neon-text-magenta" data-testid="page-title">Activity</h1>
+
+    <% if ((orders ?? []).length===0) { %>
+        <div class="mt-12 neon-card rounded-2xl px-8 py-20 text-center" data-testid="empty-state">
+            <div class="text-4xl mb-4">📭</div>
+            <div class="text-base text-white/60">No activity yet</div>
+        </div>
+        <% } else { %>
+            <div class="mt-8 space-y-5" data-testid="orders">
+                <% orders.forEach((o)=> { %>
+                    <% const statusLabel=o.status==='confirmed' ? 'Sold' : (o.status==='pending' ? 'Pending' : o.status)
+                        %>
+                        <% const createdHuman=o.created_at ? new Date(o.created_at * 1000).toLocaleDateString('en-US', {
+                            year: 'numeric' , month: 'short' , day: 'numeric' , timeZone: 'UTC' }) : '' %>
+                            <div class="neon-card rounded-2xl p-5" data-testid="order-row">
+                                <div class="flex items-start gap-5">
+                                    <a class="block shrink-0"
+                                        href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>"
+                                        data-testid="order-thumb-link">
+                                        <div class="relative h-20 w-20 overflow-hidden rounded-xl bg-black/30 <%= (o.status === 'pending' || o.status === 'confirmed') ? 'opacity-60 grayscale' : '' %>"
+                                            data-controller="image" data-testid="order-thumb">
+                                            <div class="absolute inset-0 neon-skeleton" data-image-target="skeleton">
+                                            </div>
+                                            <% if (o.status==='pending' ) { %>
+                                                <div
+                                                    class="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+                                                    <span class="button-spinner neon-pending-text"></span>
+                                                </div>
+                                                <% } %>
+                                                    <% if (o.status==='confirmed' ) { %>
+                                                        <div
+                                                            class="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+                                                            <span
+                                                                class="text-[10px] font-bold uppercase tracking-wider neon-success-text">Sold</span>
+                                                        </div>
+                                                        <% } %>
+                                                            <iframe
+                                                                src="https://ordinals.com/preview/<%= encodeURIComponent(o.inscription_id) %>"
+                                                                class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-500"
+                                                                loading="lazy" data-image-target="media"
+                                                                data-action="load->image#loaded error->image#error"
+                                                                data-testid="order-thumb-media"></iframe>
+                                        </div>
+                                    </a>
+
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <a class="text-sm font-medium text-white hover:neon-text-cyan transition-colors truncate"
+                                                href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>"
+                                                data-testid="order-inscription-link">
+                                                <%= o.collection_slug %>
+                                            </a>
+                                            <span
+                                                class="<%= o.status === 'pending' ? 'neon-badge-pending' : 'neon-badge-sold' %> rounded-full px-3 py-1 text-xs font-semibold"
+                                                data-testid="order-status">
+                                                <%= statusLabel %>
+                                            </span>
+                                        </div>
+                                        <div class="mt-3 flex items-center gap-4 text-sm text-white/50"
+                                            data-testid="order-meta">
+                                            <% if (o.price_sats) { %>
+                                                <span class="neon-price font-bold" data-testid="order-price">
+                                                    <%= formatSats(o.price_sats) %>
+                                                </span>
+                                                <% } %>
+                                                    <% if (createdHuman) { %>
+                                                        <span data-testid="order-created">
+                                                            <%= createdHuman %>
+                                                        </span>
+                                                        <% } %>
+                                        </div>
+                                        <% if (o.txid) { %>
+                                            <a class="mt-3 inline-flex items-center gap-2 text-sm neon-text-cyan hover:underline"
+                                                href="https://mempool.space/tx/<%= encodeURIComponent(o.txid) %>"
+                                                target="_blank" rel="noopener" data-testid="order-tx-link">
+                                                <span class="truncate max-w-[180px]">
+                                                    <%= o.txid %>
+                                                </span>
+                                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                                    <path d="M6 4h6v6M12 4L4 12" stroke="currentColor"
+                                                        stroke-width="1.5" stroke-linecap="round"
+                                                        stroke-linejoin="round" />
+                                                </svg>
+                                            </a>
+                                            <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                            <% }) %>
+            </div>
+            <% } %>
+</section>

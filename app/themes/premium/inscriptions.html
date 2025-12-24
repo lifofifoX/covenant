@@ -1,0 +1,142 @@
+<section class="pb-8" data-testid="inscriptions-page">
+    <h2 class="sr-only" data-testid="page-title">Store</h2>
+
+    <div>
+        <% if (collection.parent_inscription_id || collection.gallery_inscription_id) { %>
+            <% const isGallery=Boolean(collection.gallery_inscription_id) %>
+                <% const bannerId=isGallery ? collection.gallery_inscription_id : collection.parent_inscription_id %>
+                    <div class="mb-8 overflow-hidden rounded-2xl glass" data-testid="parent-banner">
+                        <div class="flex items-stretch">
+                            <a class="block w-28 shrink-0 overflow-hidden bg-white/[0.02]"
+                                href="/<%= encodeURIComponent(collection.slug) %>" data-testid="parent-thumb-link">
+                                <img src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>" alt=""
+                                    loading="lazy" decoding="async" style="image-rendering: pixelated"
+                                    class="block h-full w-full object-cover" data-testid="parent-thumb" />
+                            </a>
+                            <div class="min-w-0 px-6 py-5" data-testid="parent-meta">
+                                <div class="flex min-w-0 items-center justify-between gap-4"
+                                    data-testid="parent-title-row">
+                                    <a class="min-w-0 truncate text-lg font-semibold tracking-tight text-white/95 hover:text-white transition-colors"
+                                        href="/<%= encodeURIComponent(collection.slug) %>"
+                                        data-testid="parent-collection-link">
+                                        <%= collection.title %>
+                                    </a>
+                                    <a class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-white/[0.06] px-3 py-1.5 font-mono text-xs text-white/70 hover:bg-white/[0.1] hover:text-white transition-colors"
+                                        href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+                                        target="_blank" rel="noopener" data-testid="parent-ordinals-number-link"><span>#
+                                            <%= parentInscription.number %>
+                                        </span><span class="text-orange-400">◉</span></a>
+                                </div>
+                                <div class="mt-4 flex flex-wrap items-center gap-3 text-sm" data-testid="parent-info">
+                                    <% if (isGallery) { %>
+                                        <span
+                                            class="inline-flex items-center gap-2 rounded-full bg-amber-500/15 border border-amber-500/25 px-3 py-1.5 text-amber-400"
+                                            data-testid="parent-children">
+                                            <span aria-hidden="true">🖼️</span>
+                                            <span class="font-medium">
+                                                <%= new
+                                                    Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %>
+                                            </span>
+                                        </span>
+                                        <% } else { %>
+                                            <span
+                                                class="inline-flex items-center gap-2 rounded-full bg-rose-500/15 border border-rose-500/25 px-3 py-1.5 text-rose-400"
+                                                data-testid="parent-children" title="On-chain parent child provenance">
+                                                <span aria-hidden="true">🧬</span>
+                                                <span class="font-medium">
+                                                    <%= new
+                                                        Intl.NumberFormat('en-US').format(parentInscription.childCount)
+                                                        %>
+                                                </span>
+                                            </span>
+                                            <% if (parentInscription.isSealed) { %>
+                                                <span
+                                                    class="inline-flex items-center gap-2 rounded-full bg-orange-500/15 border border-orange-500/25 px-3 py-1.5 font-medium text-orange-400"
+                                                    data-testid="parent-sealed"
+                                                    title="The parent inscription owner cannot create more children"><span
+                                                        aria-hidden="true">🔥</span><span
+                                                        class="uppercase tracking-wide text-xs">Sealed</span></span>
+                                                <% } else { %>
+                                                    <span
+                                                        class="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/25 px-3 py-1.5 font-medium text-emerald-400"
+                                                        data-testid="parent-unsealed"
+                                                        title="The parent inscription owner can create more children"><span
+                                                            aria-hidden="true">🔓</span><span
+                                                            class="uppercase tracking-wide text-xs">Unsealed</span></span>
+                                                    <% } %>
+                                                        <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                        <% if ((collection.itemsCount ?? 0)===0) { %>
+                            <div class="flex flex-col items-center justify-center py-20 text-center"
+                                data-testid="empty-state">
+                                <div
+                                    class="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.03] ring-1 ring-white/[0.08]">
+                                    <span class="text-3xl opacity-40 grayscale">💎</span>
+                                </div>
+                                <h3 class="text-2xl font-bold text-white mb-2" data-testid="empty-title">No inscriptions
+                                    available</h3>
+                                <p class="text-white/50 max-w-sm mx-auto">This collection currently has no items listed.
+                                </p>
+                            </div>
+                            <% } else { %>
+                                <div data-testid="grid" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                    <%- collection.itemsHtml %>
+                                </div>
+                                <% } %>
+
+                                    <% if ((collection.itemsCount ?? 0)> 0 && (pagination.totalPages ?? 1) > 1) { %>
+                                        <div class="mt-10 flex items-center justify-between gap-4"
+                                            data-testid="pagination">
+                                            <a class="inline-flex items-center gap-2 rounded-xl bg-white/[0.06] px-5 py-3 text-sm font-medium text-white/80 hover:bg-white/[0.1] transition-colors <%= pagination.hasPrev ? '' : 'invisible' %>"
+                                                href="<%= pagination.prevUrl %>" data-testid="prev-page"
+                                                data-action="click->store#paginate">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                                    <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5"
+                                                        stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                                <span>Previous</span>
+                                            </a>
+                                            <div class="flex flex-wrap items-center justify-center gap-2"
+                                                data-testid="page-links">
+                                                <% if ((pagination.pages ?? []).length> 0) { %>
+                                                    <% pagination.pages.forEach((pageLink)=> { %>
+                                                        <% if (pageLink.type==='gap' ) { %>
+                                                            <span class="px-2 py-2 text-sm text-white/30"
+                                                                aria-hidden="true">…</span>
+                                                            <% } else { %>
+                                                                <a class="<%= pageLink.isActive ? 'inline-flex min-w-10 items-center justify-center rounded-xl bg-orange-500/20 border border-orange-500/30 px-3 py-2 text-sm font-medium text-orange-400' : 'inline-flex min-w-10 items-center justify-center rounded-xl bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/60 hover:bg-white/[0.08] hover:text-white/80 transition-colors' %>"
+                                                                    href="<%= pageLink.url %>" data-testid="page-link"
+                                                                    data-page="<%= pageLink.n %>"
+                                                                    data-action="click->store#paginate">
+                                                                    <%= pageLink.n %>
+                                                                </a>
+                                                                <% } %>
+                                                                    <% }) %>
+                                                                        <% } else { %>
+                                                                            <div class="flex items-center gap-2 rounded-xl bg-white/[0.06] px-4 py-2 font-mono text-sm text-white/60"
+                                                                                data-testid="page-pill">
+                                                                                <span>Page</span>
+                                                                                <span class="font-medium text-white/80"
+                                                                                    data-store-target="page">
+                                                                                    <%= pagination.page %>
+                                                                                </span>
+                                                                            </div>
+                                                                            <% } %>
+                                            </div>
+                                            <a class="inline-flex items-center gap-2 rounded-xl bg-orange-500/15 border border-orange-500/25 px-5 py-3 text-sm font-medium text-orange-400 hover:bg-orange-500/25 transition-colors <%= pagination.hasNext ? '' : 'invisible' %>"
+                                                href="<%= pagination.nextUrl %>" data-testid="next-page"
+                                                data-action="click->store#paginate">
+                                                <span>Next</span>
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                                    <path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5"
+                                                        stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </a>
+                                        </div>
+                                        <% } %>
+    </div>
+</section>

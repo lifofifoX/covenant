@@ -1,0 +1,111 @@
+<div class="min-h-full md:grid md:grid-cols-2 lg:grid-cols-5 h-full">
+    <!-- Left: Media Preview (Span 3/5 on large screens) -->
+    <div
+        class="lg:col-span-3 bg-[#050505] flex items-center justify-center p-8 relative border-b md:border-b-0 md:border-r border-[#333] min-h-[50vh]">
+        <div class="relative w-full max-w-lg aspect-square border border-[#333] p-1 shadow-2xl shadow-black">
+            <% if (inscription.isImage) { %>
+                <img src="<%= inscription.contentUrl %>" class="w-full h-full object-contain" />
+                <% } else { %>
+                    <iframe src="<%= inscription.previewUrl %>" class="w-full h-full border-0"></iframe>
+                    <% } %>
+
+                        <!-- Technical Overlay -->
+                        <div class="absolute top-0 right-0 p-2 opacity-50">
+                            <div class="text-[10px] font-mono text-white bg-black px-1 border border-[#333]">RES: HIGH
+                            </div>
+                        </div>
+        </div>
+    </div>
+
+    <!-- Right: Data Panel (Span 2/5) -->
+    <div class="lg:col-span-2 bg-black flex flex-col h-full overflow-y-auto">
+        <!-- Header -->
+        <div class="p-6 border-b border-[#333]">
+            <div class="flex justify-between items-start mb-2">
+                <h1 class="text-xl font-bold font-mono tracking-tight">
+                    <%= inscription.title %>
+                </h1>
+                <div class="text-xs text-[#666] font-mono border border-[#333] px-2 py-1">ID: #<%= inscription.number %>
+                </div>
+            </div>
+            <div class="text-xs font-mono text-[#888] uppercase">
+                <%= collection.title %>
+            </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="flex-1">
+            <div class="grid grid-cols-2 text-xs font-mono border-b border-[#333]">
+                <div class="p-4 border-r border-[#333] text-[#666]">INSCRIPTION_ID</div>
+                <div class="p-4 text-white truncate">
+                    <%= inscription.id %>
+                </div>
+
+                <div class="p-4 border-r border-[#333] border-t border-[#333] text-[#666]">CONTENT_TYPE</div>
+                <div class="p-4 border-t border-[#333] text-white">
+                    <%= inscription.contentType %>
+                </div>
+
+                <div class="p-4 border-r border-[#333] border-t border-[#333] text-[#666]">GENESIS_HEIGHT</div>
+                <div class="p-4 border-t border-[#333] text-white">
+                    <%= inscription.genesisHeight %>
+                </div>
+
+                <div class="p-4 border-r border-[#333] border-t border-[#333] text-[#666]">TIMESTAMP</div>
+                <div class="p-4 border-t border-[#333] text-white">
+                    <%= new Date(inscription.genesisTimestamp * 1000).toUTCString() %>
+                </div>
+            </div>
+
+            <!-- Description Section -->
+            <% if (inscription.meta?.description) { %>
+                <div class="p-6 border-b border-[#333]">
+                    <div class="text-[10px] uppercase text-[#666] mb-2 font-bold">Metadata</div>
+                    <p class="text-sm text-[#aaa] leading-relaxed font-mono">
+                        <%= inscription.meta.description %>
+                    </p>
+                </div>
+                <% } %>
+        </div>
+
+        <!-- Action Footer (Sticky Bottom) -->
+        <div class="p-6 border-t border-[#333] bg-[#050505] sticky bottom-0 z-20">
+            <% if (order) { %>
+                <% if (order.status==='confirmed' ) { %>
+                    <div
+                        class="w-full border border-red-900 bg-red-900/10 p-4 text-center text-red-500 font-bold font-mono uppercase">
+                        /// ASSET_SOLD ///
+                    </div>
+                    <% } else if (order.status==='pending' ) { %>
+                        <div
+                            class="w-full border border-orange-900 bg-orange-900/10 p-4 text-center text-orange-500 font-bold font-mono uppercase animate-pulse">
+                            /// TRANSACTION_PENDING ///
+                        </div>
+                        <% } %>
+                            <% } else if (inscription.priceSats) { %>
+                                <!-- Buy Interface -->
+                                <div class="flex justify-between items-end mb-4">
+                                    <div class="text-xs text-[#666] uppercase">Ask Price</div>
+                                    <div class="text-2xl font-bold font-mono text-white">
+                                        <%= formatSats(inscription.priceSats) %>
+                                    </div>
+                                </div>
+
+                                <form action="/buy/<%= inscription.id %>" method="POST">
+                                    <button type="submit"
+                                        class="w-full btn-prec-primary py-4 text-sm tracking-wider uppercase">
+                                        INITIATE_TRANSFER_PROTOCOL
+                                    </button>
+                                </form>
+                                <div class="text-center mt-3 text-[10px] text-[#444]">
+                                    SECURE_TX_V3 // ENCRYPTED
+                                </div>
+                                <% } else { %>
+                                    <div
+                                        class="w-full border border-[#333] bg-[#111] p-4 text-center text-[#666] font-mono text-xs uppercase">
+                                        NOT_LISTED_FOR_SALE
+                                    </div>
+                                    <% } %>
+        </div>
+    </div>
+</div>

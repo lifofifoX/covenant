@@ -1,0 +1,50 @@
+<a class="neon-card group block rounded-2xl overflow-hidden"
+    href="/<%= encodeURIComponent(collection.slug) %>/<%= encodeURIComponent(inscription.id) %>"
+    data-testid="inscription-card" data-inscription-id="<%= inscription.id %>">
+    <div class="relative aspect-square bg-black/30 overflow-hidden <%= (order && (order.status === 'pending' || order.status === 'confirmed')) ? 'opacity-60 grayscale' : '' %>"
+        data-controller="image">
+        <div class="absolute inset-0 neon-skeleton" data-image-target="skeleton"></div>
+        <% if (order && order.status==='pending' ) { %>
+            <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <span class="button-spinner neon-pending-text h-6 w-6"></span>
+            </div>
+            <% } %>
+                <% if (order && order.status==='confirmed' ) { %>
+                    <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <span
+                            class="neon-badge-sold rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider">Sold</span>
+                    </div>
+                    <% } %>
+                        <% if (inscription.isImage) { %>
+                            <img src="<%= inscription.contentUrl %>" alt="<%= inscription.title %>" loading="lazy"
+                                decoding="async" style="image-rendering: pixelated"
+                                class="block h-full w-full object-cover opacity-0 transition-all duration-500 group-hover:scale-105"
+                                data-image-target="img" data-action="load->image#loaded error->image#error"
+                                data-testid="inscription-thumb" />
+                            <% } else { %>
+                                <iframe src="<%= inscription.previewUrl %>"
+                                    class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-500"
+                                    loading="lazy" allow="accelerometer; gyroscope" data-image-target="media"
+                                    data-action="load->image#loaded error->image#error"
+                                    data-testid="inscription-thumb"></iframe>
+                                <% } %>
+    </div>
+    <div class="p-5">
+        <div class="flex items-center justify-between gap-3" data-testid="inscription-title">
+            <span class="truncate text-base font-semibold text-white group-hover:neon-text-cyan transition-colors">
+                <%= inscription.title %>
+            </span>
+            <% if (order && order.status==='pending' ) { %>
+                <span
+                    class="neon-badge-pending rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">Pending</span>
+                <% } %>
+                    <% if (order && order.status==='confirmed' ) { %>
+                        <span
+                            class="neon-badge-sold rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">Sold</span>
+                        <% } %>
+        </div>
+        <div class="mt-3 neon-price text-xl font-bold" data-testid="inscription-price">
+            <%= formatSats(collection.price_sats) %>
+        </div>
+    </div>
+</a>

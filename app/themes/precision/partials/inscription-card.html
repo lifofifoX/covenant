@@ -1,0 +1,52 @@
+<!-- Precision Inscription Card (Grid Cell) -->
+<a href="/<%= encodeURIComponent(item.collectionSlug) %>/<%= encodeURIComponent(item.id) %>"
+    class="group relative bg-black aspect-square block overflow-hidden hover:bg-[#0a0a0a] transition-colors">
+
+    <!-- Image -->
+    <div class="absolute inset-0 p-8 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0"
+        data-controller="image">
+        <div class="absolute inset-0 bg-[#111] animate-pulse" data-image-target="skeleton"></div>
+        <% if (item.isImage) { %>
+            <img src="<%= item.contentUrl %>"
+                class="max-w-full max-h-full object-contain opacity-0 transition-opacity duration-300"
+                data-image-target="img" data-action="load->image#loaded error->image#error" />
+            <% } else { %>
+                <iframe src="<%= item.previewUrl %>"
+                    class="w-full h-full border-0 pointer-events-none opacity-0 transition-opacity duration-300"
+                    data-image-target="media" data-action="load->image#loaded error->image#error"></iframe>
+                <% } %>
+    </div>
+
+    <!-- ID Overlay -->
+    <div class="absolute top-0 left-0 p-3 w-full">
+        <div class="text-[10px] font-mono text-[#666] group-hover:text-blue-500 transition-colors">
+            #<%= item.number %>
+        </div>
+    </div>
+
+    <!-- Status Overlay -->
+    <% if (item.status==='pending' ) { %>
+        <div class="absolute inset-0 flex items-center justify-center bg-black/50 z-10 backdrop-blur-sm">
+            <span class="text-xs uppercase text-orange-500 font-bold animate-pulse">PENDING_TX</span>
+        </div>
+        <% } else if (item.status==='confirmed' ) { %>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/50 z-10 backdrop-blur-sm">
+                <span class="text-xs uppercase text-green-500 font-bold border border-green-500 px-2 py-1">SOLD</span>
+            </div>
+            <% } %>
+
+                <!-- Price Footer -->
+                <% if (item.priceSats) { %>
+                    <div
+                        class="absolute bottom-0 left-0 w-full p-3 border-t border-[#111] bg-black/50 backdrop-blur-sm">
+                        <div class="font-mono text-xs text-white text-right">
+                            <%= formatSats(item.priceSats) %>
+                        </div>
+                    </div>
+                    <% } %>
+
+                        <!-- Corner -->
+                        <div
+                            class="absolute top-0 right-0 w-1 h-1 border-t border-r border-[#333] group-hover:border-blue-500 transition-colors">
+                        </div>
+</a>

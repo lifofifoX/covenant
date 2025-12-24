@@ -1,0 +1,47 @@
+<a class="card group block rounded-xl overflow-hidden"
+    href="/<%= encodeURIComponent(collection.slug) %>/<%= encodeURIComponent(inscription.id) %>"
+    data-testid="inscription-card" data-inscription-id="<%= inscription.id %>">
+    <div class="relative aspect-square bg-[#0f0f10] <%= (order && (order.status === 'pending' || order.status === 'confirmed')) ? 'opacity-50' : '' %>"
+        data-controller="image">
+        <div class="absolute inset-0 img-placeholder" data-image-target="skeleton"></div>
+        <% if (order && order.status==='pending' ) { %>
+            <div class="absolute inset-0 z-10 flex items-center justify-center">
+                <span class="button-spinner text-white/40"></span>
+            </div>
+            <% } %>
+                <% if (order && order.status==='confirmed' ) { %>
+                    <div class="absolute inset-0 z-10 flex items-center justify-center">
+                        <span class="text-xs font-medium uppercase tracking-widest text-white/50">Sold</span>
+                    </div>
+                    <% } %>
+                        <% if (inscription.isImage) { %>
+                            <img src="<%= inscription.contentUrl %>" alt="<%= inscription.title %>" loading="lazy"
+                                decoding="async" style="image-rendering: pixelated"
+                                class="block h-full w-full object-cover opacity-0 transition-opacity duration-300"
+                                data-image-target="img" data-action="load->image#loaded error->image#error"
+                                data-testid="inscription-thumb" />
+                            <% } else { %>
+                                <iframe src="<%= inscription.previewUrl %>"
+                                    class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-300"
+                                    loading="lazy" allow="accelerometer; gyroscope" data-image-target="media"
+                                    data-action="load->image#loaded error->image#error"
+                                    data-testid="inscription-thumb"></iframe>
+                                <% } %>
+    </div>
+    <div class="p-5">
+        <div class="flex items-center justify-between gap-3" data-testid="inscription-title">
+            <span class="truncate text-base font-medium text-white/90">
+                <%= inscription.title %>
+            </span>
+            <% if (order && order.status==='pending' ) { %>
+                <span class="text-xs text-white/40">Pending</span>
+                <% } %>
+                    <% if (order && order.status==='confirmed' ) { %>
+                        <span class="text-xs text-white/40">Sold</span>
+                        <% } %>
+        </div>
+        <div class="mt-2 price text-lg" data-testid="inscription-price">
+            <%= formatSats(collection.price_sats) %>
+        </div>
+    </div>
+</a>

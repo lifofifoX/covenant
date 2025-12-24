@@ -1,0 +1,85 @@
+<section class="pb-8" data-testid="home-page">
+    <!-- Artist About -->
+    <div data-testid="about">
+        <div class="neon-card rounded-2xl px-6 py-6 md:px-8 md:py-8">
+            <div class="text-base leading-relaxed text-white/80" data-testid="artist-about">
+                <%= artist.about %>
+            </div>
+            <div class="mt-6 flex flex-wrap items-center gap-3" data-testid="artist-social">
+                <% if (artist.socials.websiteUrl) { %>
+                    <a class="flex h-10 w-10 items-center justify-center rounded-xl neon-card text-lg hover:neon-text-cyan transition-all"
+                        href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener"
+                        data-testid="artist-social-website" aria-label="Website">🌐</a>
+                    <% } %>
+                        <% if (artist.socials.xUrl) { %>
+                            <a class="flex h-10 w-10 items-center justify-center rounded-xl neon-card text-lg hover:neon-text-magenta transition-all"
+                                href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener"
+                                data-testid="artist-social-x" aria-label="X">𝕏</a>
+                            <% } %>
+                                <% if (artist.socials.githubUrl) { %>
+                                    <a class="flex h-10 w-10 items-center justify-center rounded-xl neon-card text-lg hover:neon-text-lime transition-all"
+                                        href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener"
+                                        data-testid="artist-social-github" aria-label="GitHub">🐙</a>
+                                    <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collections -->
+    <div class="mt-12" data-testid="collections">
+        <h2 class="text-sm font-semibold uppercase tracking-widest neon-text-cyan" data-testid="collections-title">
+            Collections</h2>
+
+        <div class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="collections-grid">
+            <% (collections ?? []).forEach((collection)=> { %>
+                <a class="neon-card group block rounded-2xl overflow-hidden"
+                    href="/<%= encodeURIComponent(collection.slug) %>" data-testid="collection-card"
+                    data-collection-slug="<%= collection.slug %>">
+                    <div class="relative aspect-square bg-black/30 overflow-hidden" data-controller="image">
+                        <div class="absolute inset-0 neon-skeleton" data-image-target="skeleton"></div>
+                        <% if (collection.thumbnail.isImage) { %>
+                            <img src="<%= collection.thumbnail.contentUrl %>" alt="<%= collection.title %>"
+                                loading="lazy" decoding="async" style="image-rendering: pixelated"
+                                class="block h-full w-full object-cover opacity-0 transition-all duration-500 group-hover:scale-105"
+                                data-image-target="img" data-action="load->image#loaded error->image#error"
+                                data-testid="collection-thumb" />
+                            <% } else { %>
+                                <iframe src="<%= collection.thumbnail.previewUrl %>"
+                                    class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-500"
+                                    loading="lazy" allow="accelerometer; gyroscope" data-image-target="media"
+                                    data-action="load->image#loaded error->image#error"
+                                    data-testid="collection-thumb"></iframe>
+                                <% } %>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center gap-3" data-testid="collection-title">
+                            <span
+                                class="text-base font-semibold text-white group-hover:neon-text-cyan transition-colors">
+                                <%= collection.title %>
+                            </span>
+                            <% if (collection.hasGallery) { %>
+                                <span class="text-lg" aria-label="Gallery">🖼️</span>
+                                <% } else if (collection.hasParent) { %>
+                                    <span class="text-lg" aria-label="Parent">🧬</span>
+                                    <% } %>
+                        </div>
+                        <div class="mt-4 flex items-center gap-4">
+                            <span class="neon-price text-xl font-bold" data-testid="collection-price">
+                                <%= formatSats(collection.priceSats) %>
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3 py-1.5 text-xs text-white/60"
+                                data-testid="collection-available">
+                                <span class="h-1.5 w-1.5 rounded-full bg-[#c8ff00]"
+                                    style="box-shadow: 0 0 6px #c8ff00;"></span>
+                                <span>
+                                    <%= collection.availableCount %>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                <% }) %>
+        </div>
+    </div>
+</section>

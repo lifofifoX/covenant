@@ -1,0 +1,47 @@
+<div class="max-w-3xl mx-auto py-12 px-6 font-mono">
+    <div class="mb-8 border-b border-[#333] pb-4">
+        <h1 class="text-xl font-bold uppercase tracking-widest text-white">System_Protocols // Policy</h1>
+        <div class="text-xs text-[#666] mt-1">Last updated: <%= new Date().toISOString().split('T')[0] %>
+        </div>
+    </div>
+
+    <div class="space-y-8 text-sm text-[#aaa]">
+        <div class="p-6 border border-[#333] bg-[#050505]">
+            <h2 class="text-white font-bold uppercase mb-4 text-xs tracking-wider flex items-center gap-2">
+                <span class="w-2 h-2 bg-blue-500"></span>
+                Acquisition Protocol
+            </h2>
+            <p class="leading-relaxed">
+                All acquisitions are final. Transactions execute via PSBT (Partially Signed Bitcoin Transactions) or
+                direct on-chain engraving. Verify all hashes before broadcast.
+            </p>
+        </div>
+
+        <div class="p-6 border border-[#333] bg-[#050505]">
+            <h2 class="text-white font-bold uppercase mb-4 text-xs tracking-wider flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-500"></span>
+                Provenance Verification
+            </h2>
+            <p class="leading-relaxed">
+                Artifacts are inscribed on the Bitcoin blockchain. Ownership is secured by cryptographic proof. The
+                platform serves as an indexer and facilitator; custody remains with the user at all times until
+                transaction execution.
+            </p>
+        </div>
+
+        <div class="p-6 border border-[#333] bg-[#050505]">
+            <h2 class="text-white font-bold uppercase mb-4 text-xs tracking-wider flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500"></span>
+                Liability Disclaimer
+            </h2>
+            <p class="leading-relaxed">
+                Network fees (sat/vB) are dynamic. The operator assumes no liability for mempool congestion, dropped
+                transactions, or reorgs. Interact with the protocol at your own risk level.
+            </p>
+        </div>
+
+        <div class="pt-8 text-center text-xs text-[#444]">
+            /// END_OF_FILE ///
+        </div>
+    </div>
+</div>

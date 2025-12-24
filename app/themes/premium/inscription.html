@@ -1,0 +1,359 @@
+<section class="pb-8" data-testid="inscription-page" data-controller="inscription"
+    data-action="wallet:connected@window->inscription#onWalletConnected wallet:disconnected@window->inscription#onWalletDisconnected"
+    data-inscription-price-value="<%= checkout.priceSats %>"
+    data-inscription-inscription-metadata-value="<%= JSON.stringify(inscription.metadata) %>"
+    data-inscription-payment-address-value="<%= config.payment_address %>">
+    <% if (config.parent_inscription_id || config.gallery_inscription_id) { %>
+        <% const isGallery=Boolean(config.gallery_inscription_id) %>
+            <% const bannerId=isGallery ? config.gallery_inscription_id : config.parent_inscription_id %>
+                <div class="mb-6 overflow-hidden rounded-2xl glass" data-testid="parent-banner">
+                    <div class="flex items-stretch">
+                        <a class="block w-24 shrink-0 overflow-hidden bg-white/[0.02]"
+                            href="/<%= encodeURIComponent(config.slug) %>" data-testid="parent-thumb-link">
+                            <img src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>" alt=""
+                                loading="lazy" decoding="async" style="image-rendering: pixelated"
+                                class="block h-full w-full object-cover" data-testid="parent-thumb" />
+                        </a>
+                        <div class="min-w-0 px-6 py-4" data-testid="parent-meta">
+                            <div class="flex min-w-0 items-center justify-between gap-4" data-testid="parent-title-row">
+                                <a class="min-w-0 truncate text-base font-semibold tracking-tight text-white/95 hover:text-white transition-colors"
+                                    href="/<%= encodeURIComponent(config.slug) %>" data-testid="parent-collection-link">
+                                    <%= config.title %>
+                                </a>
+                                <a class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-white/[0.06] px-3 py-1.5 font-mono text-xs text-white/70 hover:bg-white/[0.1] transition-colors"
+                                    href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+                                    target="_blank" rel="noopener" data-testid="parent-ordinals-number-link"><span>#<%=
+                                            parentInscription.number %></span><span class="text-orange-400">◉</span></a>
+                            </div>
+                            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs" data-testid="parent-info">
+                                <% if (isGallery) { %>
+                                    <span
+                                        class="inline-flex items-center gap-2 rounded-full bg-amber-500/15 border border-amber-500/25 px-2.5 py-1 text-amber-400"
+                                        data-testid="parent-children">
+                                        <span aria-hidden="true">🖼️</span>
+                                        <span class="font-medium">
+                                            <%= new Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %>
+                                        </span>
+                                    </span>
+                                    <% } else { %>
+                                        <span
+                                            class="inline-flex items-center gap-2 rounded-full bg-rose-500/15 border border-rose-500/25 px-2.5 py-1 text-rose-400"
+                                            data-testid="parent-children">
+                                            <span aria-hidden="true">🧬</span>
+                                            <span class="font-medium">
+                                                <%= new Intl.NumberFormat('en-US').format(parentInscription.childCount)
+                                                    %>
+                                            </span>
+                                        </span>
+                                        <% if (parentInscription.isSealed) { %>
+                                            <span
+                                                class="inline-flex items-center gap-2 rounded-full bg-orange-500/15 border border-orange-500/25 px-2.5 py-1 font-medium text-orange-400"
+                                                data-testid="parent-sealed"><span aria-hidden="true">🔥</span><span
+                                                    class="uppercase tracking-wide">Sealed</span></span>
+                                            <% } else { %>
+                                                <span
+                                                    class="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/25 px-2.5 py-1 font-medium text-emerald-400"
+                                                    data-testid="parent-unsealed"><span
+                                                        aria-hidden="true">🔓</span><span
+                                                        class="uppercase tracking-wide">Unsealed</span></span>
+                                                <% } %>
+                                                    <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+                    <div class="mb-2">
+                        <h1 class="truncate text-xl font-semibold tracking-tight text-white/95"
+                            data-testid="page-title">
+                            <%= title %>
+                        </h1>
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+                        <!-- Media -->
+                        <div class="lg:sticky lg:top-8">
+                            <div class="relative aspect-square overflow-hidden rounded-2xl glass" data-testid="media"
+                                data-controller="image">
+                                <div class="absolute inset-0 skeleton-shimmer" data-image-target="skeleton"></div>
+                                <% if (inscription.isImage) { %>
+                                    <img src="<%= inscription.contentUrl %>" alt="<%= title %>" loading="eager"
+                                        decoding="async" style="image-rendering: pixelated"
+                                        class="block h-full w-full object-contain opacity-0 transition-opacity duration-500"
+                                        data-image-target="img" data-action="load->image#loaded error->image#error"
+                                        data-testid="inscription-media-img" />
+                                    <% } else { %>
+                                        <iframe src="<%= inscription.previewUrl %>"
+                                            class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-500"
+                                            allow="accelerometer; gyroscope" data-image-target="media"
+                                            data-action="load->image#loaded error->image#error"
+                                            data-testid="inscription-media-iframe"></iframe>
+                                        <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Details & Purchase -->
+                        <div class="space-y-6">
+                            <!-- Details Panel -->
+                            <div class="glass rounded-2xl p-6" data-testid="details">
+                                <h3 class="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4">Details
+                                </h3>
+                                <dl class="space-y-4" data-testid="details-grid">
+                                    <div class="flex items-start justify-between gap-4" data-testid="detail-id">
+                                        <dt class="text-sm text-white/50">ID</dt>
+                                        <dd>
+                                            <a class="block truncate max-w-[280px] font-mono text-xs text-white/80 hover:text-orange-400 transition-colors"
+                                                href="https://ordinals.com/inscription/<%= encodeURIComponent(inscription.id) %>"
+                                                target="_blank" rel="noopener" data-testid="detail-id-link">
+                                                <%= inscription.id %>
+                                            </a>
+                                        </dd>
+                                    </div>
+                                    <div class="flex items-start justify-between gap-4" data-testid="detail-number">
+                                        <dt class="text-sm text-white/50">Number</dt>
+                                        <dd>
+                                            <a class="font-mono text-sm text-white/80 hover:text-orange-400 transition-colors"
+                                                href="https://ordinals.com/inscription/<%= encodeURIComponent(inscription.id) %>"
+                                                target="_blank" rel="noopener" data-testid="detail-number-link">#<%=
+                                                    inscription.number %></a>
+                                        </dd>
+                                    </div>
+                                    <div class="flex items-start justify-between gap-4" data-testid="detail-sat">
+                                        <dt class="text-sm text-white/50">Sat</dt>
+                                        <dd>
+                                            <a class="font-mono text-sm text-white/80 hover:text-orange-400 transition-colors"
+                                                href="https://ordinals.com/sat/<%= encodeURIComponent(inscription.sat) %>"
+                                                target="_blank" rel="noopener" data-testid="detail-sat-link">
+                                                <%= inscription.sat %>
+                                            </a>
+                                        </dd>
+                                    </div>
+                                    <% if (inscription.charmIcons.length> 0) { %>
+                                        <div class="flex items-start justify-between gap-4" data-testid="detail-charms">
+                                            <dt class="text-sm text-white/50">Charms</dt>
+                                            <dd class="flex flex-wrap gap-1.5 text-lg"
+                                                data-testid="detail-charms-icons">
+                                                <% inscription.charmIcons.forEach((icon)=> { %>
+                                                    <span>
+                                                        <%= icon %>
+                                                    </span>
+                                                    <% }) %>
+                                            </dd>
+                                        </div>
+                                        <% } %>
+                                            <% if (inscription.parents.length> 0) { %>
+                                                <div class="flex items-start justify-between gap-4"
+                                                    data-testid="detail-parents">
+                                                    <dt class="text-sm text-white/50">Parents</dt>
+                                                    <dd class="space-y-1" data-testid="detail-parents-list">
+                                                        <% inscription.parents.forEach((parentId)=> { %>
+                                                            <a class="block truncate max-w-[280px] font-mono text-xs text-white/80 hover:text-orange-400 transition-colors"
+                                                                href="https://ordinals.com/inscription/<%= encodeURIComponent(parentId) %>"
+                                                                target="_blank" rel="noopener" title="<%= parentId %>"
+                                                                data-testid="detail-parent-link">
+                                                                <%= parentId %>
+                                                            </a>
+                                                            <% }) %>
+                                                    </dd>
+                                                </div>
+                                                <% } %>
+                                                    <div class="flex items-start justify-between gap-4"
+                                                        data-testid="detail-inscribed">
+                                                        <dt class="text-sm text-white/50">Inscribed</dt>
+                                                        <dd>
+                                                            <% const inscribedIso=new Date(inscription.timestamp *
+                                                                1000).toISOString() %>
+                                                                <% const inscribedHuman=new Date(inscription.timestamp *
+                                                                    1000).toLocaleDateString('en-US', { year: 'numeric'
+                                                                    , month: 'long' , day: 'numeric' , timeZone: 'UTC'
+                                                                    }) %>
+                                                                    <time class="text-sm text-white/80"
+                                                                        datetime="<%= inscribedIso %>"
+                                                                        data-testid="detail-inscribed-value">
+                                                                        <%= inscribedHuman %>
+                                                                    </time>
+                                                        </dd>
+                                                    </div>
+                                </dl>
+                            </div>
+
+                            <!-- Price & Purchase -->
+                            <% if (order.status==='pending' || order.status==='confirmed' ) { %>
+                                <%- include('partials/order', { order }) %>
+                                    <% } else { %>
+                                        <div class="rounded-2xl overflow-hidden" data-testid="price-card">
+                                            <div
+                                                class="bg-gradient-to-r from-orange-500/20 to-amber-500/10 border border-orange-500/20 px-6 py-5">
+                                                <div class="text-sm font-medium text-white/60">Price</div>
+                                                <div class="mt-2 flex items-baseline gap-3" data-testid="price-row">
+                                                    <div class="price-gradient text-3xl font-bold"
+                                                        data-testid="price-sats">
+                                                        <%= formatSats(checkout.priceSats) %>
+                                                    </div>
+                                                </div>
+                                                <div class="hidden mt-1 font-mono text-sm text-white/50"
+                                                    data-usd-sats="<%= checkout.priceSats %>"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="glass rounded-2xl p-6" data-testid="purchase-panel">
+                                            <form class="mt-0" method="post" data-testid="buy-form"
+                                                data-inscription-target="form">
+                                                <% if (order.status !=='pending' && order.status !=='confirmed' ) { %>
+                                                    <% if ((config.optional_payments ?? []).length> 0) { %>
+                                                        <div data-testid="optional-payments">
+                                                            <div class="text-sm font-medium text-white/60 mb-3">Include
+                                                                additional payments</div>
+                                                            <div class="space-y-2">
+                                                                <% config.optional_payments.forEach((payment, index)=> {
+                                                                    %>
+                                                                    <label
+                                                                        class="flex items-start gap-4 rounded-xl bg-white/[0.04] px-4 py-4 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                                                                        data-testid="optional-payment">
+                                                                        <input
+                                                                            class="mt-1 h-4 w-4 rounded border-white/20 bg-white/[0.05] accent-orange-500"
+                                                                            type="checkbox"
+                                                                            data-inscription-target="optionalPayment"
+                                                                            data-payment='<%= JSON.stringify(payment) %>'
+                                                                            data-action="inscription#calculateCost" />
+                                                                        <div class="flex-1">
+                                                                            <div
+                                                                                class="flex items-center justify-between gap-4">
+                                                                                <span
+                                                                                    class="font-medium text-indigo-400">
+                                                                                    <%= payment.title %>
+                                                                                </span>
+                                                                                <span class="price-gradient font-bold">
+                                                                                    <%= formatSats(payment.amount) %>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="mt-1 text-sm text-white/50">
+                                                                                <%= payment.description %>
+                                                                            </div>
+                                                                        </div>
+                                                                    </label>
+                                                                    <% }) %>
+                                                            </div>
+                                                        </div>
+                                                        <% } %>
+
+                                                            <div class="mt-6 space-y-4 border-t border-white/[0.06] pt-6"
+                                                                data-testid="fees">
+                                                                <div class="space-y-3" data-inscription-target="fees">
+                                                                    <div
+                                                                        class="flex items-center justify-between gap-4">
+                                                                        <span class="text-sm text-white/50">Network
+                                                                            fee</span>
+                                                                        <div class="text-right">
+                                                                            <div
+                                                                                class="font-mono text-sm text-white/80">
+                                                                                <span
+                                                                                    data-inscription-target="fee">-</span>
+                                                                            </div>
+                                                                            <div
+                                                                                class="mt-0.5 font-mono text-xs text-white/40">
+                                                                                <span
+                                                                                    data-inscription-target="feeRate">-</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div
+                                                                        class="flex items-center justify-between gap-4">
+                                                                        <span
+                                                                            class="text-sm font-medium text-white/70">Total</span>
+                                                                        <div class="text-right">
+                                                                            <div
+                                                                                class="price-gradient font-bold text-lg">
+                                                                                <span
+                                                                                    data-inscription-target="total">-</span>
+                                                                            </div>
+                                                                            <div class="hidden mt-0.5 font-mono text-xs text-white/40"
+                                                                                data-usd-role="total" data-usd-sats="">
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <% } %>
+
+                                                                <div class="mt-6">
+                                                                    <% if (order.status==='pending' ||
+                                                                        order.status==='confirmed' ) { %>
+                                                                        <button
+                                                                            class="w-full rounded-xl px-6 py-4 text-sm font-semibold <%= order.status === 'pending' ? 'badge-pending' : 'bg-white/[0.04] text-white/50' %> cursor-not-allowed"
+                                                                            type="button" data-testid="buy-button"
+                                                                            disabled>
+                                                                            <%= order.status==='pending'
+                                                                                ? 'Purchase Pending...' : 'Sold' %>
+                                                                        </button>
+                                                                        <% } else { %>
+                                                                            <button
+                                                                                class="hide-on-connected w-full rounded-xl bg-white/[0.06] px-6 py-4 text-sm font-medium text-white/50 cursor-not-allowed"
+                                                                                type="button"
+                                                                                data-inscription-target="connectButton"
+                                                                                disabled>Connect wallet to buy</button>
+
+                                                                            <button
+                                                                                class="show-on-connected w-full btn-success btn-glow rounded-xl px-6 py-4 text-sm"
+                                                                                type="button"
+                                                                                data-inscription-target="prepareButton"
+                                                                                data-action="click->inscription#prepare">
+                                                                                <span
+                                                                                    class="inline-flex w-full items-center justify-center gap-2">
+                                                                                    <span
+                                                                                        data-inscription-target="prepareSpinner"
+                                                                                        class="button-spinner button-spinner-hidden"></span>
+                                                                                    <span
+                                                                                        data-inscription-target="prepareLabel">Prepare
+                                                                                        Purchase</span>
+                                                                                </span>
+                                                                            </button>
+
+                                                                            <button
+                                                                                class="hidden w-full btn-primary btn-glow rounded-xl px-6 py-4 text-sm"
+                                                                                type="button" data-testid="buy-button"
+                                                                                data-inscription-target="buyButton"
+                                                                                data-action="click->inscription#buy">
+                                                                                <span
+                                                                                    class="inline-flex w-full items-center justify-center gap-2">
+                                                                                    <span
+                                                                                        data-inscription-target="buySpinner"
+                                                                                        class="button-spinner button-spinner-hidden"></span>
+                                                                                    <span
+                                                                                        data-inscription-target="buyLabel">Complete
+                                                                                        Purchase</span>
+                                                                                </span>
+                                                                            </button>
+                                                                            <% } %>
+                                                                </div>
+                                            </form>
+
+                                            <div class="<%= (order.status === 'pending' || order.status === 'confirmed') ? '' : 'hidden' %> mt-6 rounded-xl bg-emerald-500/15 border border-emerald-500/20 px-5 py-4"
+                                                data-inscription-target="successPanel" data-testid="buy-success">
+                                                <div class="font-semibold text-emerald-400"
+                                                    data-inscription-target="successTitle">
+                                                    <%= order.status==='pending' ? 'Purchase Pending' :
+                                                        (order.status==='confirmed' ? 'Sold' : 'Congrats 🎉' ) %>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <a class="font-mono text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                                                        target="_blank" rel="noopener"
+                                                        data-inscription-target="successLink"
+                                                        href="https://mempool.space/tx/<%= order.txid ?? '' %>">View on
+                                                        mempool.space →</a>
+                                                </div>
+                                            </div>
+
+                                            <div class="hidden mt-6 rounded-xl bg-red-500/15 border border-red-500/20 px-5 py-4"
+                                                data-inscription-target="errorPanel" data-testid="buy-client-error">
+                                                <div class="font-semibold text-red-400"
+                                                    data-inscription-target="errorTitle">Something went wrong</div>
+                                                <div class="mt-2 font-mono text-sm text-white/60"
+                                                    data-inscription-target="errorMessage"></div>
+                                            </div>
+                                        </div>
+                                        <% } %>
+                        </div>
+                    </div>
+</section>

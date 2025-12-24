@@ -1,0 +1,115 @@
+/* Precision Theme - High-end trading terminal aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+.theme-precision {
+    --prec-bg: #000000;
+    --prec-surface: #0a0a0a;
+    --prec-border: #333333;
+    --prec-border-light: #555555;
+    --prec-text: #ffffff;
+    --prec-text-muted: #888888;
+    --prec-accent: #2563eb;
+    /* Electric Blue */
+    --prec-accent-hover: #1d4ed8;
+    --prec-success: #00ff00;
+    /* Terminal Green */
+    --prec-error: #ff0000;
+
+    font-family: 'JetBrains Mono', monospace;
+    color-scheme: dark;
+    letter-spacing: -0.02em;
+}
+
+/* Base Styles */
+.theme-precision body {
+    background-color: var(--prec-bg);
+    color: var(--prec-text);
+}
+
+.theme-precision ::selection {
+    background: var(--prec-accent);
+    color: white;
+}
+
+/* Utilities */
+.theme-precision .border-prec {
+    border: 1px solid var(--prec-border);
+}
+
+.theme-precision .border-b-prec {
+    border-bottom: 1px solid var(--prec-border);
+}
+
+.theme-precision .border-r-prec {
+    border-right: 1px solid var(--prec-border);
+}
+
+.theme-precision .bg-prec-surface {
+    background-color: var(--prec-surface);
+}
+
+/* Interactive Elements */
+.theme-precision .interactive-row {
+    transition: background-color 0.1s ease;
+}
+
+.theme-precision .interactive-row:hover {
+    background-color: #111;
+}
+
+/* Buttons */
+.theme-precision .btn-prec {
+    border: 1px solid var(--prec-border);
+    background: black;
+    color: white;
+    padding: 0.5rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    transition: all 0.1s ease;
+}
+
+.theme-precision .btn-prec:hover {
+    border-color: var(--prec-accent);
+    color: var(--prec-accent);
+    transform: translateY(-1px);
+}
+
+.theme-precision .btn-prec-primary {
+    background: var(--prec-accent);
+    border: 1px solid var(--prec-accent);
+    color: white;
+    font-weight: 700;
+}
+
+.theme-precision .btn-prec-primary:hover {
+    background: var(--prec-accent-hover);
+    border-color: var(--prec-accent-hover);
+}
+
+/* Scrollbar - Minimal */
+.theme-precision::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.theme-precision::-webkit-scrollbar-track {
+    background: black;
+    border-left: 1px solid #222;
+}
+
+.theme-precision::-webkit-scrollbar-thumb {
+    background: #333;
+}
+
+.theme-precision::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Grid & Layout Helper */
+.theme-precision .grid-scanline {
+    background:
+        linear-gradient(to right, #111 1px, transparent 1px),
+        linear-gradient(to bottom, #111 1px, transparent 1px);
+    background-size: 20px 20px;
+}

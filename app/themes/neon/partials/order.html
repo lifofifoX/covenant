@@ -1,0 +1,37 @@
+<div data-testid="order-status-panel">
+    <% if (order.status==='pending' ) { %>
+        <div class="neon-pending rounded-2xl p-6">
+            <div class="flex items-center gap-3">
+                <span class="button-spinner neon-pending-text"></span>
+                <span class="font-semibold neon-pending-text">Purchase Pending</span>
+            </div>
+            <% if (order.txid) { %>
+                <a class="mt-4 inline-flex items-center gap-2 text-sm neon-text-cyan hover:underline"
+                    href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener">
+                    <span>View on mempool.space</span>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 4h6v6M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </a>
+                <% } %>
+        </div>
+        <% } else if (order.status==='confirmed' ) { %>
+            <div class="neon-success rounded-2xl p-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-lg">✓</span>
+                    <span class="font-semibold neon-success-text">Sold</span>
+                </div>
+                <% if (order.txid) { %>
+                    <a class="mt-4 inline-flex items-center gap-2 text-sm neon-text-cyan hover:underline"
+                        href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener">
+                        <span>View transaction</span>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path d="M6 4h6v6M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                    <% } %>
+            </div>
+            <% } %>
+</div>

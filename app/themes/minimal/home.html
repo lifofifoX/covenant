@@ -1,0 +1,77 @@
+<section class="pb-8" data-testid="home-page">
+    <!-- Artist About -->
+    <div data-testid="about">
+        <div class="text-base leading-relaxed text-white/60" data-testid="artist-about">
+            <%= artist.about %>
+        </div>
+        <div class="mt-6 flex flex-wrap items-center gap-4" data-testid="artist-social">
+            <% if (artist.socials.websiteUrl) { %>
+                <a class="text-white/30 hover:text-white transition-colors" href="<%= artist.socials.websiteUrl %>"
+                    target="_blank" rel="noopener" data-testid="artist-social-website" aria-label="Website">🌐</a>
+                <% } %>
+                    <% if (artist.socials.xUrl) { %>
+                        <a class="text-white/30 hover:text-white transition-colors" href="<%= artist.socials.xUrl %>"
+                            target="_blank" rel="noopener" data-testid="artist-social-x" aria-label="X">𝕏</a>
+                        <% } %>
+                            <% if (artist.socials.githubUrl) { %>
+                                <a class="text-white/30 hover:text-white transition-colors"
+                                    href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener"
+                                    data-testid="artist-social-github" aria-label="GitHub">🐙</a>
+                                <% } %>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider my-12"></div>
+
+    <!-- Collections -->
+    <div data-testid="collections">
+        <h2 class="text-sm font-medium text-white/40 uppercase tracking-widest" data-testid="collections-title">
+            Collections</h2>
+
+        <div class="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3" data-testid="collections-grid">
+            <% (collections ?? []).forEach((collection)=> { %>
+                <a class="card group block rounded-xl overflow-hidden"
+                    href="/<%= encodeURIComponent(collection.slug) %>" data-testid="collection-card"
+                    data-collection-slug="<%= collection.slug %>">
+                    <div class="relative aspect-square bg-[#0f0f10]" data-controller="image">
+                        <div class="absolute inset-0 img-placeholder" data-image-target="skeleton"></div>
+                        <% if (collection.thumbnail.isImage) { %>
+                            <img src="<%= collection.thumbnail.contentUrl %>" alt="<%= collection.title %>"
+                                loading="lazy" decoding="async" style="image-rendering: pixelated"
+                                class="block h-full w-full object-cover opacity-0 transition-opacity duration-300"
+                                data-image-target="img" data-action="load->image#loaded error->image#error"
+                                data-testid="collection-thumb" />
+                            <% } else { %>
+                                <iframe src="<%= collection.thumbnail.previewUrl %>"
+                                    class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-300"
+                                    loading="lazy" allow="accelerometer; gyroscope" data-image-target="media"
+                                    data-action="load->image#loaded error->image#error"
+                                    data-testid="collection-thumb"></iframe>
+                                <% } %>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center gap-2" data-testid="collection-title">
+                            <span class="text-base font-medium text-white/90">
+                                <%= collection.title %>
+                            </span>
+                            <% if (collection.hasGallery) { %>
+                                <span class="text-sm" aria-label="Gallery">🖼️</span>
+                                <% } else if (collection.hasParent) { %>
+                                    <span class="text-sm" aria-label="Parent">🧬</span>
+                                    <% } %>
+                        </div>
+                        <div class="mt-3 flex items-center gap-4">
+                            <span class="price text-lg" data-testid="collection-price">
+                                <%= formatSats(collection.priceSats) %>
+                            </span>
+                            <span class="text-sm text-white/40" data-testid="collection-available">
+                                <%= collection.availableCount %> available
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                <% }) %>
+        </div>
+    </div>
+</section>

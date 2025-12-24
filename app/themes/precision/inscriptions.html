@@ -1,0 +1,53 @@
+<!-- Precision Inscriptions List -->
+<div class="min-h-full">
+    <!-- Collection Header -->
+    <div
+        class="sticky top-0 z-30 bg-black/95 backdrop-blur border-b border-[#333] flex items-center justify-between px-6 py-3">
+        <div class="font-mono text-xs flex items-center gap-2">
+            <a href="/" class="text-[#666] hover:text-white transition-colors">ROOT</a>
+            <span class="text-[#333]">/</span>
+            <span class="text-white font-bold uppercase">
+                <%= collection.title %>
+            </span>
+        </div>
+
+        <!-- Sort/Filter Hooks (Visual Only) -->
+        <div class="flex gap-4 text-xs font-mono text-[#666]">
+            <div>ITEMS: <span class="text-white">
+                    <%= collection.itemsCount %>
+                </span></div>
+        </div>
+    </div>
+
+    <% if ((collection.itemsCount ?? 0)===0) { %>
+        <div class="flex flex-col items-center justify-center h-[50vh] text-[#444] border-b border-[#333]">
+            <div class="text-4xl mb-4 grayscale opacity-20">Folder_Empty</div>
+            <div class="text-xs uppercase tracking-widest">0_OBJECTS_FOUND</div>
+        </div>
+        <% } else { %>
+            <!-- Grid Wrapper -->
+            <div
+                class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-px bg-[#333] border-b border-[#333]">
+                <%- collection.itemsHtml %>
+            </div>
+            <% } %>
+
+                <!-- Pagination -->
+                <% if ((collection.itemsCount ?? 0)> 0 && (pagination.totalPages ?? 1) > 1) { %>
+                    <div class="flex items-center justify-between p-6 border-b border-[#333]">
+                        <a href="<%= pagination.prevUrl %>"
+                            class="btn-prec <%= pagination.hasPrev ? '' : 'opacity-0 pointer-events-none' %>">
+                            &lt; PREV
+                        </a>
+
+                        <div class="text-xs font-mono text-[#666]">
+                            PAGE <%= pagination.page %> / <%= pagination.totalPages %>
+                        </div>
+
+                        <a href="<%= pagination.nextUrl %>"
+                            class="btn-prec <%= pagination.hasNext ? '' : 'opacity-0 pointer-events-none' %>">
+                            NEXT &gt;
+                        </a>
+                    </div>
+                    <% } %>
+</div>

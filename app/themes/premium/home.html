@@ -1,0 +1,109 @@
+<section class="pb-12 page-enter" data-testid="home-page">
+    <!-- Immersive Hero Section - Ultra Compact -->
+    <div class="relative py-6 text-center md:py-8" data-testid="hero">
+        <!-- Ambient Background Glow -->
+        <div
+            class="absolute left-1/2 top-1/2 -z-10 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500/10 blur-[80px]">
+        </div>
+
+        <div class="relative z-10 mx-auto max-w-3xl">
+            <!-- Small Avatar Ring -->
+            <div
+                class="mx-auto mb-3 h-14 w-14 overflow-hidden rounded-full p-0.5 ring-2 ring-white/10 shadow-lg shadow-orange-500/10">
+                <img src="<%= CONFIG.artist_avatar_url %>" alt="" class="h-full w-full rounded-full object-cover" />
+            </div>
+
+            <!-- Hero Typography - Compact -->
+            <h1 class="mb-2 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                <%= CONFIG.artist_name %>
+            </h1>
+
+            <div class="mx-auto mb-4 max-w-lg text-sm leading-relaxed text-white/60" data-testid="artist-about">
+                <%= artist.about %>
+            </div>
+
+            <!-- Social Actions - Small -->
+            <div class="flex flex-wrap items-center justify-center gap-2" data-testid="artist-social">
+                <% if (artist.socials.websiteUrl) { %>
+                    <a class="group flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-0.5"
+                        href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener">
+                        <span>🌐</span>
+                        <span>Website</span>
+                    </a>
+                    <% } %>
+                        <% if (artist.socials.xUrl) { %>
+                            <a class="group flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-0.5"
+                                href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener">
+                                <span>𝕏</span>
+                                <span>Twitter</span>
+                            </a>
+                            <% } %>
+                                <% if (artist.socials.githubUrl) { %>
+                                    <a class="group flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-0.5"
+                                        href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener">
+                                        <span>🐙</span>
+                                        <span>GitHub</span>
+                                    </a>
+                                    <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collections Grid -->
+    <div class="mt-8 border-t border-white/[0.08] pt-16" data-testid="collections">
+        <div class="mb-10 text-center">
+            <h2 class="text-2xl font-semibold tracking-tight text-white mb-2">Collections</h2>
+            <div class="h-1 w-12 bg-orange-500 rounded-full mx-auto opacity-50"></div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3" data-testid="collections-grid">
+            <% (collections ?? []).forEach((collection)=> { %>
+                <a href="/<%= encodeURIComponent(collection.slug) %>" class="group block cursor-pointer">
+                    <!-- Clean Card Image container -->
+                    <div
+                        class="relative aspect-square overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/10 transition-all duration-500 group-hover:ring-orange-500/50 group-hover:shadow-2xl group-hover:shadow-orange-500/10 card-lift">
+                        <!-- Gradient Overlay -->
+                        <div
+                            class="absolute inset-0 bg-gradient-to-tr from-orange-500/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                        </div>
+
+                        <!-- Image -->
+                        <div class="absolute inset-0 flex items-center justify-center p-8 transition-transform duration-700 ease-out group-hover:scale-105"
+                            data-controller="image">
+                            <!-- Skeleton -->
+                            <div class="absolute inset-0 bg-white/5 animate-pulse" data-image-target="skeleton"></div>
+
+                            <% if (collection.thumbnail.isImage) { %>
+                                <img src="<%= collection.thumbnail.contentUrl %>"
+                                    class="max-h-full max-w-full object-contain drop-shadow-2xl img-reveal"
+                                    alt="<%= collection.title %>" loading="lazy" data-image-target="img"
+                                    data-action="load->image#loaded error->image#error" />
+                                <% } else { %>
+                                    <iframe src="<%= collection.thumbnail.previewUrl %>"
+                                        class="h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-500"
+                                        loading="lazy" data-image-target="media"
+                                        data-action="load->image#loaded error->image#error"></iframe>
+                                    <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Clean Metadata Below Card -->
+                    <div class="mt-6 text-center">
+                        <h3 class="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">
+                            <%= collection.title %>
+                        </h3>
+                        <div class="mt-2 flex items-center justify-center gap-3 text-sm font-medium">
+                            <span class="price-gradient font-bold">
+                                <%= formatSats(collection.priceSats) %>
+                            </span>
+                            <span class="h-1 w-1 rounded-full bg-white/20"></span>
+                            <span class="<%= collection.availableCount > 0 ? 'text-emerald-400' : 'text-white/40' %>">
+                                <%= collection.availableCount %> available
+                            </span>
+                        </div>
+                    </div>
+                </a>
+                <% }) %>
+        </div>
+    </div>
+</section>

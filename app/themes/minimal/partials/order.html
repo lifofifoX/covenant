@@ -1,0 +1,22 @@
+<div data-testid="order-status-panel">
+    <% if (order.status==='pending' ) { %>
+        <div class="flex items-center gap-3 p-4 rounded-lg border border-white/10">
+            <span class="button-spinner text-white/40"></span>
+            <span class="text-sm text-white/60">Purchase Pending</span>
+        </div>
+        <% if (order.txid) { %>
+            <a class="mt-3 inline-block text-sm text-white/40 hover:text-white/60 transition-colors"
+                href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener">View transaction →</a>
+            <% } %>
+                <% } else if (order.status==='confirmed' ) { %>
+                    <div class="flex items-center gap-3 p-4 rounded-lg border border-white/10">
+                        <span class="text-white/50">✓</span>
+                        <span class="text-sm text-white/60">Sold</span>
+                    </div>
+                    <% if (order.txid) { %>
+                        <a class="mt-3 inline-block text-sm text-white/40 hover:text-white/60 transition-colors"
+                            href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener">View
+                            transaction →</a>
+                        <% } %>
+                            <% } %>
+</div>

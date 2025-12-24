@@ -1,0 +1,102 @@
+<section class="pb-8" data-testid="inscriptions-page">
+    <h2 class="sr-only" data-testid="page-title">Store</h2>
+
+    <div>
+        <% if (collection.parent_inscription_id || collection.gallery_inscription_id) { %>
+            <% const isGallery=Boolean(collection.gallery_inscription_id) %>
+                <% const bannerId=isGallery ? collection.gallery_inscription_id : collection.parent_inscription_id %>
+                    <div class="mb-10 neon-card rounded-2xl overflow-hidden" data-testid="parent-banner">
+                        <div class="flex items-stretch">
+                            <a class="block w-28 shrink-0 bg-black/30"
+                                href="/<%= encodeURIComponent(collection.slug) %>" data-testid="parent-thumb-link">
+                                <img src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>" alt=""
+                                    loading="lazy" decoding="async" style="image-rendering: pixelated"
+                                    class="block h-full w-full object-cover" data-testid="parent-thumb" />
+                            </a>
+                            <div class="min-w-0 px-6 py-5" data-testid="parent-meta">
+                                <div class="flex items-center justify-between gap-4" data-testid="parent-title-row">
+                                    <a class="text-lg font-semibold text-white hover:neon-text-cyan transition-colors"
+                                        href="/<%= encodeURIComponent(collection.slug) %>"
+                                        data-testid="parent-collection-link">
+                                        <%= collection.title %>
+                                    </a>
+                                    <a class="inline-flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-1.5 font-mono text-xs text-white/60 hover:neon-text-cyan transition-colors"
+                                        href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+                                        target="_blank" rel="noopener" data-testid="parent-ordinals-number-link">
+                                        <span>#<%= parentInscription.number %></span>
+                                        <span class="neon-text-orange">◉</span>
+                                    </a>
+                                </div>
+                                <div class="mt-4 flex flex-wrap items-center gap-3 text-sm" data-testid="parent-info">
+                                    <% if (isGallery) { %>
+                                        <span class="neon-badge-pending rounded-full px-3 py-1.5"
+                                            data-testid="parent-children">🖼️ <%= new
+                                                Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %>
+                                                </span>
+                                        <% } else { %>
+                                            <span class="neon-border-magenta rounded-full px-3 py-1.5 text-[#ff00e5]"
+                                                data-testid="parent-children">🧬 <%= new
+                                                    Intl.NumberFormat('en-US').format(parentInscription.childCount) %>
+                                                    </span>
+                                            <% if (parentInscription.isSealed) { %>
+                                                <span class="neon-badge-pending rounded-full px-3 py-1.5"
+                                                    data-testid="parent-sealed">🔥 Sealed</span>
+                                                <% } else { %>
+                                                    <span class="neon-badge-sold rounded-full px-3 py-1.5"
+                                                        data-testid="parent-unsealed">🔓 Unsealed</span>
+                                                    <% } %>
+                                                        <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+
+                        <% if ((collection.itemsCount ?? 0)===0) { %>
+                            <div class="neon-card rounded-2xl px-8 py-20 text-center" data-testid="empty-state">
+                                <div class="text-4xl mb-4">📭</div>
+                                <div class="text-base text-white/60" data-testid="empty-title">No inscriptions available
+                                </div>
+                            </div>
+                            <% } else { %>
+                                <div data-testid="grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                                    <%- collection.itemsHtml %>
+                                </div>
+                                <% } %>
+
+                                    <% if ((collection.itemsCount ?? 0)> 0 && (pagination.totalPages ?? 1) > 1) { %>
+                                        <div class="mt-12 flex items-center justify-between gap-4"
+                                            data-testid="pagination">
+                                            <a class="btn-neon-outline rounded-xl px-5 py-3 text-sm font-medium <%= pagination.hasPrev ? '' : 'invisible' %>"
+                                                href="<%= pagination.prevUrl %>" data-testid="prev-page"
+                                                data-action="click->store#paginate">← Previous</a>
+                                            <div class="flex items-center gap-2" data-testid="page-links">
+                                                <% if ((pagination.pages ?? []).length> 0) { %>
+                                                    <% pagination.pages.forEach((pageLink)=> { %>
+                                                        <% if (pageLink.type==='gap' ) { %>
+                                                            <span class="px-2 text-white/30">…</span>
+                                                            <% } else { %>
+                                                                <a class="<%= pageLink.isActive ? 'min-w-10 text-center rounded-lg neon-border-cyan py-2 text-sm neon-text-cyan' : 'min-w-10 text-center py-2 text-sm text-white/50 hover:neon-text-cyan transition-colors' %>"
+                                                                    href="<%= pageLink.url %>" data-testid="page-link"
+                                                                    data-page="<%= pageLink.n %>"
+                                                                    data-action="click->store#paginate">
+                                                                    <%= pageLink.n %>
+                                                                </a>
+                                                                <% } %>
+                                                                    <% }) %>
+                                                                        <% } else { %>
+                                                                            <span class="text-sm text-white/50"
+                                                                                data-testid="page-pill">Page <span
+                                                                                    class="neon-text-cyan"
+                                                                                    data-store-target="page">
+                                                                                    <%= pagination.page %>
+                                                                                </span></span>
+                                                                            <% } %>
+                                            </div>
+                                            <a class="btn-neon rounded-xl px-5 py-3 text-sm font-medium <%= pagination.hasNext ? '' : 'invisible' %>"
+                                                href="<%= pagination.nextUrl %>" data-testid="next-page"
+                                                data-action="click->store#paginate">Next →</a>
+                                        </div>
+                                        <% } %>
+    </div>
+</section>

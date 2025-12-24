@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>
+    <%= title %>
+  </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="<%= assets.css %>" />
+  <script type="module" src="<%= assets.js %>"></script>
+</head>
+
+<body data-controller="store body-class usd"
+  data-action="wallet:connected@window->body-class#setConnected wallet:disconnected@window->body-class#setDisconnected"
+  class="theme-premium min-h-screen antialiased text-white selection:bg-orange-500/30" style="background: #08090c; background-image:
+      radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.08), transparent 40%),
+      radial-gradient(circle at 100% 0%, rgba(139, 92, 246, 0.05), transparent 30%);">
+  <!-- Full Width Sticky Header -->
+  <header
+    class="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#08090c]/80 backdrop-blur-xl transition-all duration-300"
+    data-testid="topbar">
+    <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 md:px-8">
+      <div class="flex items-center gap-4">
+        <a href="/"
+          class="group relative h-10 w-10 overflow-hidden rounded-full ring-2 ring-white/10 transition-all hover:ring-orange-500/50"
+          aria-label="Home" data-testid="home-link">
+          <img src="<%= CONFIG.artist_avatar_url %>" alt=""
+            class="block h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+        </a>
+        <a href="/" class="block" data-testid="brand-home-link">
+          <h1 class="text-base font-bold tracking-wide text-white transition-colors hover:text-orange-400"
+            data-testid="brand-title">
+            <%= CONFIG.artist_name %>
+          </h1>
+        </a>
+      </div>
+
+      <nav class="hidden items-center gap-10 md:flex" data-testid="header-nav">
+        <a class="nav-link text-sm font-medium text-white/60 hover:text-white transition-colors" href="/"
+          data-testid="nav-home">Home</a>
+        <a class="nav-link text-sm font-medium text-white/60 hover:text-white transition-colors" href="/activity"
+          data-testid="nav-activity">Activity</a>
+        <a class="nav-link text-sm font-medium text-white/60 hover:text-white transition-colors" href="/policy"
+          data-testid="nav-policy">Policy</a>
+      </nav>
+
+      <div class="flex items-center justify-end gap-3" data-testid="header-right">
+        <div data-controller="wallet" data-testid="connect-slot"
+          data-action="keydown.esc@window->wallet#close mouseup@document->wallet#closeIfClickedOutside">
+          <div data-wallet-target="selector"
+            class="fixed bottom-0 right-0 z-50 w-full border-t border-white/10 bg-[#0c0d10] p-6 shadow-2xl transition-transform duration-300 translate-y-full data-[state=open]:translate-y-0 md:top-20 md:right-8 md:bottom-auto md:w-80 md:rounded-2xl md:border md:translate-y-4 md:opacity-0 md:data-[state=open]:translate-y-0 md:data-[state=open]:opacity-100 ring-1 ring-white/5"
+            data-state="closed">
+            <div class="mb-6 flex items-center justify-between">
+              <span class="font-semibold text-white">Connect Wallet</span>
+              <button class="text-white/40 hover:text-white" type="button" data-action="wallet#close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div class="space-y-3">
+              <button
+                class="flex w-full items-center gap-3 rounded-xl bg-white/5 p-4 font-medium text-white hover:bg-white/10 transition-colors"
+                data-wallet-target="xverse" data-action="wallet#authorize:prevent" data-wallet-provider-param="xverse">
+                <img src="/wallets/xverse.svg" class="h-6 w-6" alt="" />
+                <span>Xverse</span>
+              </button>
+              <button
+                class="flex w-full items-center gap-3 rounded-xl bg-white/5 p-4 font-medium text-white hover:bg-white/10 transition-colors"
+                data-wallet-target="unisat" data-action="wallet#authorize:prevent" data-wallet-provider-param="unisat">
+                <img src="/wallets/unisat.png" class="h-6 w-6" alt="" />
+                <span>Unisat</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="hide-on-connected">
+            <button
+              class="btn-primary flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-transform active:scale-95"
+              data-action="wallet#select">
+              Connect
+            </button>
+          </div>
+
+          <div class="show-on-connected">
+            <div class="relative" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+              <button
+                class="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                data-action="dropdown#toggle">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span data-wallet-target="addressPreview"></span>
+                <svg class="opacity-50" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" />
+                </svg>
+              </button>
+              <div
+                class="absolute right-0 top-full z-50 mt-2 hidden w-48 rounded-xl border border-white/10 bg-[#15161a] p-1 shadow-xl"
+                data-dropdown-target="menu">
+                <a class="block rounded-lg px-3 py-2 text-sm font-medium text-red-400 hover:bg-white/5 transition-colors"
+                  href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile menu trigger -->
+        <div class="relative md:hidden" data-controller="dropdown" data-action="mouseup@window->dropdown#hide"
+          data-testid="nav-menu">
+          <button class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-white/70"
+            data-action="dropdown#toggle">
+            <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M4 8h16M4 16h16" />
+            </svg>
+          </button>
+          <div
+            class="absolute right-0 top-full z-50 mt-2 hidden w-48 rounded-xl border border-white/10 bg-[#15161a] p-1 shadow-xl"
+            data-dropdown-target="menu">
+            <a class="block rounded-lg px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
+              href="/">Home</a>
+            <a class="block rounded-lg px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
+              href="/activity">Activity</a>
+            <a class="block rounded-lg px-4 py-3 text-sm font-medium text-white/80 hover:bg-white/5 hover:text-white"
+              href="/policy">Policy</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto w-full max-w-7xl px-6 py-8 md:px-8 page-enter" data-store-target="main">
+    <%- body %>
+  </main>
+
+  <footer class="mt-auto border-t border-white/[0.08] bg-[#0c0d10]" data-testid="footer">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-6 py-10 md:px-8">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2 text-sm text-white/40">
+          <span>Powered by</span>
+          <a class="font-medium text-white hover:text-orange-400 transition-colors"
+            href="https://github.com/lifofifoX/codex" target="_blank">CODEX</a>
+        </div>
+        <div class="text-xs text-white/20">The Wizards of Ord</div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a class="flex h-10 w-10 items-center justify-center rounded-full border border-white/5 bg-white/[0.02] text-white/40 hover:border-white/10 hover:bg-white/5 hover:text-white transition-all"
+          href="https://wizards.art/" target="_blank">🌐</a>
+        <a class="flex h-10 w-10 items-center justify-center rounded-full border border-white/5 bg-white/[0.02] text-white/40 hover:border-white/10 hover:bg-white/5 hover:text-white transition-all"
+          href="https://x.com/TheWizardsOfOrd" target="_blank">𝕏</a>
+        <a class="flex h-10 w-10 items-center justify-center rounded-full border border-white/5 bg-white/[0.02] text-white/40 hover:border-white/10 hover:bg-white/5 hover:text-white transition-all"
+          href="https://github.com/TheWizardsOfOrd" target="_blank">🐙</a>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

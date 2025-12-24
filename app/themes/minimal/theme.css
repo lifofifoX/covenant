@@ -1,0 +1,160 @@
+/* Minimal Theme - Clean, crisp, and spacious */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.theme-minimal {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color-scheme: dark;
+
+    --minimal-bg: #0a0a0b;
+    --minimal-surface: #111113;
+    --minimal-surface-hover: #18181b;
+    --minimal-border: rgba(255, 255, 255, 0.06);
+    --minimal-border-hover: rgba(255, 255, 255, 0.12);
+    --minimal-text: rgba(255, 255, 255, 0.95);
+    --minimal-text-secondary: rgba(255, 255, 255, 0.6);
+    --minimal-text-muted: rgba(255, 255, 255, 0.4);
+    --minimal-accent: #fff;
+    --minimal-accent-muted: rgba(255, 255, 255, 0.8);
+}
+
+/* Clean card style */
+.theme-minimal .card {
+    background: var(--minimal-surface);
+    border: 1px solid var(--minimal-border);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.theme-minimal .card:hover {
+    border-color: var(--minimal-border-hover);
+    background: var(--minimal-surface-hover);
+}
+
+/* Subtle button style */
+.theme-minimal .btn {
+    background: transparent;
+    border: 1px solid var(--minimal-border);
+    color: var(--minimal-text-secondary);
+    transition: all 0.2s ease;
+}
+
+.theme-minimal .btn:hover {
+    border-color: var(--minimal-text);
+    color: var(--minimal-text);
+}
+
+/* Primary button - white */
+.theme-minimal .btn-primary {
+    background: #fff;
+    border: 1px solid #fff;
+    color: #0a0a0b;
+    font-weight: 600;
+}
+
+.theme-minimal .btn-primary:hover {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* Secondary button - outlined */
+.theme-minimal .btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.theme-minimal .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Clean focus states */
+.theme-minimal *:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+/* Image loading */
+.theme-minimal .img-placeholder {
+    background: var(--minimal-surface);
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Clean nav with subtle underline */
+.theme-minimal .nav-link {
+    position: relative;
+    padding-bottom: 4px;
+}
+
+.theme-minimal .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 1px;
+    background: #fff;
+    transition: width 0.2s ease, left 0.2s ease;
+}
+
+.theme-minimal .nav-link:hover::after {
+    width: 100%;
+    left: 0;
+}
+
+/* Status indicators */
+.theme-minimal .status-pending {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.theme-minimal .status-sold {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Price styling - clean white */
+.theme-minimal .price {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* Minimal scrollbar */
+.theme-minimal::-webkit-scrollbar {
+    width: 6px;
+}
+
+.theme-minimal::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.theme-minimal::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+/* Divider */
+.theme-minimal .divider {
+    height: 1px;
+    background: var(--minimal-border);
+}
+
+/* Grid gap - more spacious */
+.theme-minimal .grid-spacious {
+    gap: 2rem;
+}
+
+@media (min-width: 768px) {
+    .theme-minimal .grid-spacious {
+        gap: 2.5rem;
+    }
+}

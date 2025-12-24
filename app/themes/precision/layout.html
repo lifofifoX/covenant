@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+        <%= title %>
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="<%= assets.css %>" />
+    <script type="module" src="<%= assets.js %>"></script>
+    <style>
+        body {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: auto;
+            }
+        }
+    </style>
+</head>
+
+<body data-controller="store body-class usd"
+    data-action="wallet:connected@window->body-class#setConnected wallet:disconnected@window->body-class#setDisconnected"
+    class="theme-precision bg-black text-white antialiased selection:bg-blue-600 selection:text-white">
+    <!-- Sidebar (Fixed Left) -->
+    <aside
+        class="h-full border-r border-[#333] bg-black flex flex-col overflow-y-auto md:h-screen md:sticky md:top-0 relative h-auto">
+        <!-- Profile Header -->
+        <div class="p-6 border-b border-[#333]">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="h-12 w-12 rounded-full ring-1 ring-[#333] p-0.5">
+                    <img src="<%= CONFIG.artist_avatar_url %>" alt=""
+                        class="h-full w-full rounded-full grayscale hover:grayscale-0 transition-all" />
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none tracking-tight">
+                        <%= CONFIG.artist_name %>
+                    </h1>
+                    <div class="text-[#666] text-xs mt-1 uppercase tracking-widest">Operator</div>
+                </div>
+            </div>
+
+            <div class="text-xs text-[#888] leading-relaxed font-mono">
+                <%= artist.about %>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 py-4">
+            <div class="px-6 mb-2 text-[10px] uppercase text-[#444] font-bold tracking-widest">System</div>
+            <a class="sidebar-link" href="/">
+                <span class="w-4 text-center">/</span>
+                <span>DASHBOARD</span>
+            </a>
+            <a class="sidebar-link" href="/activity">
+                <span class="w-4 text-center">~</span>
+                <span>ACTIVITY_LOG</span>
+            </a>
+            <a class="sidebar-link" href="/policy">
+                <span class="w-4 text-center">!</span>
+                <span>PROTOCOLS</span>
+            </a>
+        </nav>
+
+        <!-- Connections -->
+        <div class="p-6 border-t border-[#333] bg-[#050505]">
+            <div class="text-[10px] uppercase text-[#444] font-bold tracking-widest mb-3">Network</div>
+
+            <!-- Socials Mini Grid -->
+            <div class="grid grid-cols-3 gap-1 mb-4">
+                <a href="<%= artist.socials.websiteUrl %>" target="_blank"
+                    class="h-8 border border-[#333] flex items-center justify-center hover:border-blue-600 hover:text-blue-600 transition-colors">🌐</a>
+                <a href="<%= artist.socials.xUrl %>" target="_blank"
+                    class="h-8 border border-[#333] flex items-center justify-center hover:border-blue-600 hover:text-blue-600 transition-colors">𝕏</a>
+                <a href="<%= artist.socials.githubUrl %>" target="_blank"
+                    class="h-8 border border-[#333] flex items-center justify-center hover:border-blue-600 hover:text-blue-600 transition-colors">🐙</a>
+            </div>
+
+            <div data-controller="wallet"
+                data-action="keydown.esc@window->wallet#close mouseup@document->wallet#closeIfClickedOutside">
+                <!-- Wallet Connected State -->
+                <div class="show-on-connected">
+                    <div
+                        class="border border-green-900 bg-green-900/10 px-3 py-2 text-xs font-mono text-green-500 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            <span>ONLINE</span>
+                        </span>
+                        <button class="text-green-700 hover:text-red-500"
+                            data-action="wallet#logout">DISCONNECT</button>
+                    </div>
+                    <div class="mt-1 text-[10px] text-[#444] font-mono truncate" data-wallet-target="addressPreview">
+                    </div>
+                </div>
+
+                <!-- Wallet Disconnected State -->
+                <div class="hide-on-connected">
+                    <button
+                        class="w-full border border-[#333] bg-[#111] py-2 text-xs font-bold text-[#888] hover:border-white hover:text-white hover:bg-black transition-all"
+                        data-action="wallet#select">
+                        INITIALIZE_CONNECTION
+                    </button>
+
+                    <!-- Wallet Modal (Custom for Precision) -->
+                    <div data-wallet-target="selector"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden data-[state=open]:flex"
+                        data-state="closed">
+                        <div class="w-full max-w-sm border border-[#333] bg-black p-0 shadow-2xl">
+                            <div class="flex items-center justify-between border-b border-[#333] bg-[#111] px-4 py-3">
+                                <span class="text-xs font-bold uppercase tracking-widest">Select Interface</span>
+                                <button class="text-[#666] hover:text-white" data-action="wallet#close">✕</button>
+                            </div>
+                            <div class="p-4 space-y-2">
+                                <button
+                                    class="w-full border border-[#333] p-3 text-left bg-black hover:bg-[#111] hover:border-blue-600 flex items-center gap-3"
+                                    data-wallet-target="xverse" data-action="wallet#authorize:prevent"
+                                    data-wallet-provider-param="xverse">
+                                    <img src="/wallets/xverse.svg" class="h-5 w-5" alt="" />
+                                    <span class="font-mono text-sm">XVERSE_WALLET</span>
+                                </button>
+                                <button
+                                    class="w-full border border-[#333] p-3 text-left bg-black hover:bg-[#111] hover:border-blue-600 flex items-center gap-3"
+                                    data-wallet-target="unisat" data-action="wallet#authorize:prevent"
+                                    data-wallet-provider-param="unisat">
+                                    <img src="/wallets/unisat.png" class="h-5 w-5" alt="" />
+                                    <span class="font-mono text-sm">UNISAT_WALLET</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content (Scrollable Right) -->
+    <main class="h-full overflow-y-auto bg-black relative" data-store-target="main">
+        <!-- Top Bar Mobile Only -->
+        <div class="md:hidden sticky top-0 z-40 bg-black border-b border-[#333] p-4 flex items-center justify-between">
+            <span class="font-bold">CODEX_TERMINAL</span>
+            <button onclick="document.querySelector('aside').classList.toggle('hidden')"
+                class="border border-[#333] px-2 py-1 text-xs">MENU</button>
+        </div>
+
+        <div class="min-h-full">
+            <%- body %>
+        </div>
+
+        <footer class="border-t border-[#333] bg-[#050505] py-8 px-8 mt-auto">
+            <div class="flex items-center justify-between text-[10px] text-[#444] uppercase tracking-widest">
+                <div>System Status: Nominal</div>
+                <div>Powered by CODEX</div>
+            </div>
+        </footer>
+    </main>
+</body>
+
+</html>

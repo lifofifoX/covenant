@@ -1,0 +1,230 @@
+/* Neon Theme - Vibrant, high-contrast, eye-catching */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+.theme-neon {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    color-scheme: dark;
+
+    --neon-bg: #050510;
+    --neon-surface: rgba(255, 255, 255, 0.02);
+    --neon-border: rgba(255, 255, 255, 0.08);
+    --neon-text: #fff;
+    --neon-text-muted: rgba(255, 255, 255, 0.6);
+
+    /* Vibrant neon colors */
+    --neon-cyan: #00f0ff;
+    --neon-magenta: #ff00e5;
+    --neon-lime: #c8ff00;
+    --neon-orange: #ff6a00;
+
+    /* Glow intensities */
+    --glow-sm: 0 0 10px;
+    --glow-md: 0 0 20px;
+    --glow-lg: 0 0 40px;
+}
+
+/* Neon glow text */
+.theme-neon .neon-text-cyan {
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-sm) var(--neon-cyan);
+}
+
+.theme-neon .neon-text-magenta {
+    color: var(--neon-magenta);
+    text-shadow: var(--glow-sm) var(--neon-magenta);
+}
+
+.theme-neon .neon-text-lime {
+    color: var(--neon-lime);
+    text-shadow: var(--glow-sm) var(--neon-lime);
+}
+
+.theme-neon .neon-text-orange {
+    color: var(--neon-orange);
+    text-shadow: var(--glow-sm) var(--neon-orange);
+}
+
+/* Neon border glow */
+.theme-neon .neon-border-cyan {
+    border: 1px solid var(--neon-cyan);
+    box-shadow: var(--glow-sm) var(--neon-cyan), inset var(--glow-sm) rgba(0, 240, 255, 0.1);
+}
+
+.theme-neon .neon-border-magenta {
+    border: 1px solid var(--neon-magenta);
+    box-shadow: var(--glow-sm) var(--neon-magenta), inset var(--glow-sm) rgba(255, 0, 229, 0.1);
+}
+
+/* Card with neon hover */
+.theme-neon .neon-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+}
+
+.theme-neon .neon-card:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: var(--glow-md) rgba(0, 240, 255, 0.15), inset 0 0 30px rgba(0, 240, 255, 0.03);
+    transform: translateY(-2px);
+}
+
+/* Primary button - cyan glow */
+.theme-neon .btn-neon {
+    background: linear-gradient(135deg, var(--neon-cyan), #00c8d4);
+    color: #050510;
+    font-weight: 600;
+    border: none;
+    box-shadow: var(--glow-sm) rgba(0, 240, 255, 0.4);
+    transition: all 0.3s ease;
+}
+
+.theme-neon .btn-neon:hover {
+    box-shadow: var(--glow-md) rgba(0, 240, 255, 0.6);
+    transform: translateY(-1px);
+}
+
+/* Secondary button - outlined */
+.theme-neon .btn-neon-outline {
+    background: transparent;
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: var(--glow-sm) rgba(0, 240, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.theme-neon .btn-neon-outline:hover {
+    background: rgba(0, 240, 255, 0.1);
+    box-shadow: var(--glow-md) rgba(0, 240, 255, 0.3);
+}
+
+/* Success state - lime */
+.theme-neon .neon-success {
+    border-color: var(--neon-lime);
+    box-shadow: var(--glow-sm) rgba(200, 255, 0, 0.3);
+}
+
+.theme-neon .neon-success-text {
+    color: var(--neon-lime);
+    text-shadow: var(--glow-sm) var(--neon-lime);
+}
+
+/* Pending state - orange */
+.theme-neon .neon-pending {
+    border-color: var(--neon-orange);
+    box-shadow: var(--glow-sm) rgba(255, 106, 0, 0.3);
+}
+
+.theme-neon .neon-pending-text {
+    color: var(--neon-orange);
+    text-shadow: var(--glow-sm) var(--neon-orange);
+}
+
+/* Animated gradient background */
+.theme-neon .neon-bg-animated {
+    background: linear-gradient(135deg,
+            rgba(0, 240, 255, 0.03) 0%,
+            rgba(255, 0, 229, 0.03) 50%,
+            rgba(200, 255, 0, 0.02) 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Neon skeleton shimmer */
+.theme-neon .neon-skeleton {
+    background: linear-gradient(90deg,
+            rgba(0, 240, 255, 0.02) 0%,
+            rgba(255, 0, 229, 0.05) 50%,
+            rgba(0, 240, 255, 0.02) 100%);
+    background-size: 200% 100%;
+    animation: neonShimmer 2s ease-in-out infinite;
+}
+
+@keyframes neonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Price gradient */
+.theme-neon .neon-price {
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-lime));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+}
+
+/* Navigation with underline glow */
+.theme-neon .neon-nav-link {
+    position: relative;
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.3s ease;
+}
+
+.theme-neon .neon-nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--neon-cyan);
+    box-shadow: var(--glow-sm) var(--neon-cyan);
+    transition: width 0.3s ease;
+}
+
+.theme-neon .neon-nav-link:hover {
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-sm) rgba(0, 240, 255, 0.5);
+}
+
+.theme-neon .neon-nav-link:hover::after {
+    width: 100%;
+}
+
+/* Scrollbar with neon */
+.theme-neon::-webkit-scrollbar {
+    width: 8px;
+}
+
+.theme-neon::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.theme-neon::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-magenta));
+    border-radius: 4px;
+}
+
+/* Badge styles */
+.theme-neon .neon-badge-pending {
+    background: rgba(255, 106, 0, 0.15);
+    border: 1px solid var(--neon-orange);
+    color: var(--neon-orange);
+    box-shadow: var(--glow-sm) rgba(255, 106, 0, 0.2);
+}
+
+.theme-neon .neon-badge-sold {
+    background: rgba(200, 255, 0, 0.1);
+    border: 1px solid var(--neon-lime);
+    color: var(--neon-lime);
+    box-shadow: var(--glow-sm) rgba(200, 255, 0, 0.2);
+}

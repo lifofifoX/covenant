@@ -1,0 +1,207 @@
+/* Premium Theme - Bold dark design with glassmorphism */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.theme-premium {
+  --premium-bg: #08090c;
+  --premium-surface: rgba(255, 255, 255, 0.03);
+  --premium-surface-hover: rgba(255, 255, 255, 0.06);
+  --premium-border: rgba(255, 255, 255, 0.08);
+  --premium-border-hover: rgba(255, 255, 255, 0.15);
+  --premium-text: rgba(255, 255, 255, 0.92);
+  --premium-text-muted: rgba(255, 255, 255, 0.55);
+  --premium-accent: #f97316;
+  --premium-accent-glow: rgba(249, 115, 22, 0.25);
+  --premium-success: #10b981;
+  --premium-success-glow: rgba(16, 185, 129, 0.2);
+  
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+/* Glass morphism utilities */
+.theme-premium .glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.theme-premium .glass-strong {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Gradient border effect */
+.theme-premium .gradient-border {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+}
+.theme-premium .gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.03));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Card hover effects */
+.theme-premium .card-lift {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+.theme-premium .card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Button glow effect */
+.theme-premium .btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.theme-premium .btn-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--premium-accent), #fb923c);
+  opacity: 0;
+  filter: blur(12px);
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+.theme-premium .btn-glow:hover::after {
+  opacity: 0.5;
+}
+
+/* Primary button gradient */
+.theme-premium .btn-primary {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  font-weight: 600;
+  border: none;
+  transition: all 0.25s ease;
+}
+.theme-premium .btn-primary:hover {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px var(--premium-accent-glow);
+}
+
+/* Success button */
+.theme-premium .btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-weight: 600;
+  border: none;
+}
+.theme-premium .btn-success:hover {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  box-shadow: 0 8px 24px var(--premium-success-glow);
+}
+
+/* Image reveal animation */
+.theme-premium .img-reveal {
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.theme-premium .img-reveal.loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Skeleton loading - premium shimmer */
+.theme-premium .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Nav link underline animation */
+.theme-premium .nav-link {
+  position: relative;
+  padding-bottom: 2px;
+}
+.theme-premium .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #f97316, #fbbf24);
+  transition: width 0.3s ease;
+}
+.theme-premium .nav-link:hover::after,
+.theme-premium .nav-link.active::after {
+  width: 100%;
+}
+
+/* Price gradient text */
+.theme-premium .price-gradient {
+  background: linear-gradient(135deg, #f97316, #fbbf24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status badges */
+.theme-premium .badge-pending {
+  background: rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  color: #fb923c;
+}
+.theme-premium .badge-sold {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
+/* Scrollbar styling */
+.theme-premium::-webkit-scrollbar {
+  width: 8px;
+}
+.theme-premium::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+.theme-premium::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.theme-premium::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Page transitions */
+.theme-premium .page-enter {
+  animation: fadeSlideIn 0.4s ease forwards;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
