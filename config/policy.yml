@@ -20,3 +20,17 @@ selling:
         description: We need to keep the kids happy
         amount: 2222
         address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
+  - slug: nakamoto-archives
+    title: NAKAMOTO ARCHIVES
+    gallery_inscription_id: 83683a0a2e91beb6d37953df5a768028b987d5006fab1237931f6e30b344aebci0
+    price_sats: 5000000
+    payment_address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
+    optional_payments:
+      - title: Ordinals Open Institute
+        description: Support open-source development of the Ordinals protocol
+        amount: 2222
+        address: bc1qguzk63exy7h5uygg8m2tcenca094a8t464jfyvrmr0s6wkt74wls3zr5m3
+      - title: Happy meal for lifo's kids
+        description: We need to keep the kids happy
+        amount: 2222
+        address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh

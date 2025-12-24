@@ -18,6 +18,7 @@ export async function homeController(c) {
       title: collection.title,
       priceSats: collection.policy.price_sats,
       hasParent: Boolean(collectionPolicy.parent_inscription_id),
+      hasGallery: Boolean(collectionPolicy.gallery_inscription_id),
       availableCount,
       thumbnail
     })

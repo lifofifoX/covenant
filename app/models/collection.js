@@ -33,7 +33,7 @@ export class Collection {
   }
 
   get metadataInscriptionId() {
-    const id = this.policy.parent_inscription_id ?? this.policy.inscription_ids[0]
+    const id = this.policy.gallery_inscription_id ?? this.policy.parent_inscription_id ?? this.policy.inscription_ids[0]
     if (!id) throw new Error(`Missing metadata inscription id for collection: ${this.slug}`)
 
     return id
@@ -51,7 +51,7 @@ export class Collection {
   }
 
   async parentInscription({ db }) {
-    if (!this.policy.parent_inscription_id) return null
+    if (!this.policy.parent_inscription_id && !this.policy.gallery_inscription_id) return null
     return this.metadataInscription({ db })
   }
 

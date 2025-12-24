@@ -14,6 +14,20 @@ function computeAvailableIds({ ownedIds, metadataById, collection }) {
     return eligibleIds.filter((id) => ownedIds.includes(id))
   }
 
+  if (collection.gallery_inscription_id) {
+    const galleryMetadata = metadataById.get(collection.gallery_inscription_id)
+    const gallery = galleryMetadata?.properties?.gallery ?? []
+    const galleryIds = new Set(gallery.map((item) => item.id))
+
+    const out = []
+
+    for (const inscriptionId of ownedIds) {
+      if (galleryIds.has(inscriptionId)) out.push(inscriptionId)
+    }
+
+    return uniq(out)
+  }
+
   if (collection.parent_inscription_id) {
     const out = []
 

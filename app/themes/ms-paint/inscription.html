@@ -7,7 +7,9 @@
   data-inscription-inscription-metadata-value="<%= JSON.stringify(inscription.metadata) %>"
   data-inscription-payment-address-value="<%= config.payment_address %>"
 >
-  <% if (config.parent_inscription_id) { %>
+  <% if (config.parent_inscription_id || config.gallery_inscription_id) { %>
+    <% const isGallery = Boolean(config.gallery_inscription_id) %>
+    <% const bannerId = isGallery ? config.gallery_inscription_id : config.parent_inscription_id %>
     <div class="mb-4 win-inset overflow-hidden bg-white" data-testid="parent-banner">
       <div class="flex items-stretch">
         <a
@@ -16,7 +18,7 @@
           data-testid="parent-thumb-link"
         >
           <img
-            src="https://ordinals.com/content/<%= encodeURIComponent(config.parent_inscription_id) %>"
+            src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>"
             alt=""
             loading="lazy"
             decoding="async"
@@ -28,18 +30,25 @@
         <div class="min-w-0 px-3 py-3 flex flex-col justify-center">
           <div class="flex min-w-0 items-baseline gap-2" data-testid="parent-title-row">
             <a class="min-w-0 truncate text-xs font-bold underline" href="/<%= encodeURIComponent(config.slug) %>" data-testid="parent-collection-link"><%= config.title %></a>
-            <a class="shrink-0 inline-flex items-center gap-2 font-mono text-[11px] underline" href="https://ordinals.com/inscription/<%= encodeURIComponent(config.parent_inscription_id) %>" target="_blank" rel="noopener" data-testid="parent-ordinals-number-link"><span>#<%= parentInscription.number %></span><span class="ord-dot" aria-hidden="true">◉</span></a>
+            <a class="shrink-0 inline-flex items-center gap-2 font-mono text-[11px] underline" href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>" target="_blank" rel="noopener" data-testid="parent-ordinals-number-link"><span>#<%= parentInscription.number %></span><span class="ord-dot" aria-hidden="true">◉</span></a>
           </div>
           <div class="mt-2 flex flex-wrap items-center gap-2 font-mono text-[11px]" data-testid="parent-info">
-            <span class="inline-flex items-center gap-2" data-testid="parent-children" data-tooltip="On-chain parent child provenance" title="On-chain parent child provenance">
-              <span class="text-win-maroon" aria-hidden="true">🧬</span>
-              <span class="text-win-blue"><%= new Intl.NumberFormat('en-US').format(parentInscription.childCount) %></span>
-            </span>
-            <span aria-hidden="true">|</span>
-            <% if (parentInscription.isSealed) { %>
-              <span class="inline-flex items-center gap-2 font-bold uppercase text-win-maroon" data-testid="parent-sealed" data-tooltip="The parent inscription owner cannot create more children" title="The parent inscription owner cannot create more children"><span aria-hidden="true">🔥</span><span>Sealed</span></span>
+            <% if (isGallery) { %>
+              <span class="inline-flex items-center gap-2" data-testid="parent-children">
+                <span class="text-win-blue" aria-hidden="true">🖼️</span>
+                <span class="text-win-blue"><%= new Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %></span>
+              </span>
             <% } else { %>
-              <span class="inline-flex items-center gap-2 font-bold uppercase text-win-green" data-testid="parent-unsealed" data-tooltip="The parent inscription owner can create more children" title="The parent inscription owner can create more children"><span aria-hidden="true">🔓</span><span>Unsealed</span></span>
+              <span class="inline-flex items-center gap-2" data-testid="parent-children" data-tooltip="On-chain parent child provenance" title="On-chain parent child provenance">
+                <span class="text-win-maroon" aria-hidden="true">🧬</span>
+                <span class="text-win-blue"><%= new Intl.NumberFormat('en-US').format(parentInscription.childCount) %></span>
+              </span>
+              <span aria-hidden="true">|</span>
+              <% if (parentInscription.isSealed) { %>
+                <span class="inline-flex items-center gap-2 font-bold uppercase text-win-maroon" data-testid="parent-sealed" data-tooltip="The parent inscription owner cannot create more children" title="The parent inscription owner cannot create more children"><span aria-hidden="true">🔥</span><span>Sealed</span></span>
+              <% } else { %>
+                <span class="inline-flex items-center gap-2 font-bold uppercase text-win-green" data-testid="parent-unsealed" data-tooltip="The parent inscription owner can create more children" title="The parent inscription owner can create more children"><span aria-hidden="true">🔓</span><span>Unsealed</span></span>
+              <% } %>
             <% } %>
           </div>
         </div>

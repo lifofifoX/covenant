@@ -71,7 +71,9 @@
           <div class="px-3 py-3">
             <div class="flex min-w-0 items-center gap-2" data-testid="collection-title">
               <span class="min-w-0 truncate text-sm font-bold leading-snug tracking-tight"><%= collection.title %></span>
-              <% if (collection.hasParent) { %>
+              <% if (collection.hasGallery) { %>
+                <span class="shrink-0 text-win-maroon" data-testid="collection-gallery-icon" aria-label="Gallery collection">🖼️</span>
+              <% } else if (collection.hasParent) { %>
                 <span class="shrink-0 text-win-maroon" data-testid="collection-parent-icon" aria-label="Parent collection">🧬</span>
               <% } %>
             </div>

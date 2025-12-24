@@ -44,10 +44,11 @@ function validatePolicy(policy) {
     ensureNonEmptyString(c.payment_address, `config/policy.yml: selling[${idx}].payment_address`)
 
     const hasParent = typeof c.parent_inscription_id === 'string' && c.parent_inscription_id.trim() !== ''
+    const hasGallery = typeof c.gallery_inscription_id === 'string' && c.gallery_inscription_id.trim() !== ''
     const hasIds = Array.isArray(c.inscription_ids) && c.inscription_ids.length > 0
-    if (!hasParent && !hasIds) {
+    if (!hasParent && !hasGallery && !hasIds) {
       throw new Error(
-        `Invalid config/policy.yml: selling[${idx}] must set either parent_inscription_id or inscription_ids`
+        `Invalid config/policy.yml: selling[${idx}] must set either parent_inscription_id, gallery_inscription_id, or inscription_ids`
       )
     }
 

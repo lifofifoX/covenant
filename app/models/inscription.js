@@ -72,6 +72,10 @@ export class Inscription {
     return this.metadata.child_count
   }
 
+  get galleryCount() {
+    return (this.metadata.properties?.gallery ?? []).length
+  }
+
   get isSealed() {
     return this.metadata.charms.includes('burned')
   }
