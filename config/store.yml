@@ -1,7 +1,7 @@
 ord_api_url: "https://charlie.ordinals.net"
 electrs_api_url: "https://btc-1.xverse.app"
 mempool_space_api_url: "https://memproxy.inscribe.dev/api"
-theme: "default"
+theme: "zine"
 page_size: 24
 artist_name: "lifofifo"
 artist_avatar_url: "https://pbs.twimg.com/profile_images/1670101521751580672/cq7bMIwk_400x400.jpg"

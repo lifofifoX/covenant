@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus'
 import { shorten } from '../utils/index.js'
 
 export default class extends Controller {
-  static targets = ['selector', 'xverse', 'unisat', 'addressPreview']
+  static targets = ['selector', 'backdrop', 'xverse', 'unisat', 'addressPreview']
 
   connect() {
     if (Wallet.connected) this.#onWalletConnected()
@@ -28,10 +28,22 @@ export default class extends Controller {
     const height = this.selectorTarget.offsetHeight
     this.selectorTarget.style.setProperty('--selector-height', `${height}px`)
     this.selectorTarget.dataset.state = 'open'
+
+    // Show backdrop on mobile
+    if (this.hasBackdropTarget) {
+      this.backdropTarget.classList.remove('opacity-0', 'pointer-events-none')
+      this.backdropTarget.classList.add('opacity-100', 'pointer-events-auto')
+    }
   }
 
   close() {
     if (this.hasSelectorTarget) this.selectorTarget.dataset.state = 'closed'
+
+    // Hide backdrop
+    if (this.hasBackdropTarget) {
+      this.backdropTarget.classList.remove('opacity-100', 'pointer-events-auto')
+      this.backdropTarget.classList.add('opacity-0', 'pointer-events-none')
+    }
   }
 
   closeIfClickedOutside(event) {

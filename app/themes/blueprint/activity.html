@@ -1,0 +1,72 @@
+<section data-testid="activity-page">
+  <div class="section-header" style="margin-bottom: 32px;">
+    <span class="section-ref">SEC-D</span>
+    <h1 class="section-title" data-testid="page-title">Transaction Log</h1>
+    <div class="section-line"></div>
+    <span class="section-count"><%= (orders ?? []).length %> transaction<%= (orders ?? []).length !== 1 ? 's' : '' %></span>
+  </div>
+
+  <% if ((orders ?? []).length === 0) { %>
+    <div class="empty-state" data-testid="empty-state">
+      <div>NO TRANSACTIONS RECORDED</div>
+    </div>
+  <% } else { %>
+    <div class="activity-log" data-testid="orders">
+      <!-- Table header -->
+      <div class="activity-header">
+        <span>Ref #</span>
+        <span>Type</span>
+        <span>Item</span>
+        <span>Address</span>
+        <span>Amount</span>
+      </div>
+
+      <% orders.forEach((o, index) => { %>
+        <% const createdHuman = o.created_at ? new Date(o.created_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '' %>
+        <div class="activity-row" data-testid="order-row">
+          <!-- Ref # -->
+          <span class="activity-ref">TXN-<%= String(orders.length - index).padStart(4, '0') %></span>
+
+          <!-- Type -->
+          <span class="activity-type <%= o.status === 'pending' ? 'pending' : '' %>" data-testid="order-status">
+            <% if (o.status === 'pending') { %>
+              Pending
+            <% } else if (o.status === 'confirmed') { %>
+              Sale
+            <% } else { %>
+              <%= o.status %>
+            <% } %>
+          </span>
+
+          <!-- Item -->
+          <span class="activity-item">
+            <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" data-testid="order-inscription-link">
+              <%= o.inscription_id.substring(0, 16) %>...
+            </a>
+            <% if (o.txid) { %>
+              <a href="https://mempool.space/tx/<%= encodeURIComponent(o.txid) %>" target="_blank" rel="noopener" style="display: block; font-size: 10px; color: var(--color-accent); margin-top: 2px;" data-testid="order-tx-link">View tx</a>
+            <% } %>
+          </span>
+
+          <!-- Address -->
+          <span class="activity-address">
+            <% if (o.buyer_address) { %>
+              <%= o.buyer_address.substring(0, 8) %>...<%= o.buyer_address.slice(-4) %>
+            <% } else { %>
+              -
+            <% } %>
+          </span>
+
+          <!-- Amount -->
+          <span class="activity-amount" data-testid="order-price">
+            <% if (o.price_sats) { %>
+              <%= formatSats(o.price_sats) %>
+            <% } else { %>
+              -
+            <% } %>
+          </span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</section>

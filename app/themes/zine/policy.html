@@ -1,0 +1,42 @@
+<section data-testid="policy-page">
+  <div class="section-header" style="margin-bottom: 32px;">
+    <h1 class="section-title" data-testid="page-title">Terms & Policy</h1>
+  </div>
+
+  <div style="max-width: 720px;" data-testid="policy-card">
+    <!-- Payment address -->
+    <div class="metadata-list" style="margin-bottom: 32px;" data-testid="policy-title">
+      <h3>Payment Address</h3>
+      <div class="metadata-item" style="border-bottom: none;">
+        <span class="metadata-label">Wallet</span>
+        <span class="metadata-value">
+          <a
+            href="https://ordinals.com/address/<%= walletAddress %>"
+            target="_blank"
+            rel="noopener"
+            style="font-size: 0.8rem;"
+            data-testid="wallet-address-link"
+          ><%= walletAddress.substring(0, 20) %>...</a>
+        </span>
+      </div>
+    </div>
+
+    <!-- Policy YAML -->
+    <div data-testid="policy-yaml">
+      <div class="metadata-list">
+        <h3>Store Configuration</h3>
+        <pre style="font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.7; padding: 1rem; overflow-x: auto; color: var(--color-secondary); background: var(--color-bg); margin: 0; border: 2px dashed var(--color-muted);" data-testid="policy-pre"><%= policyYaml %></pre>
+      </div>
+    </div>
+
+    <!-- Additional info -->
+    <div style="margin-top: 32px; padding: 1.5rem; background: var(--color-surface); border: 3px solid var(--color-primary); transform: rotate(-0.5deg);">
+      <p style="font-size: 0.85rem; line-height: 1.8; color: var(--color-secondary);">
+        All transactions are conducted on the Bitcoin blockchain using ordinal inscriptions. Purchases are final once confirmed on-chain. Items are transferred directly to the buyer's wallet address.
+      </p>
+      <p style="font-size: 0.85rem; line-height: 1.8; color: var(--color-secondary); margin-top: 1rem;">
+        <strong style="color: var(--color-primary);">NO PLATFORMS. NO MIDDLEMEN. JUST PURE ON-CHAIN ART.</strong>
+      </p>
+    </div>
+  </div>
+</section>

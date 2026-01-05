@@ -1,0 +1,48 @@
+<div data-testid="order-panel">
+  <% const isPending = order.status === 'pending' %>
+
+  <div class="message <%= isPending ? 'message-pending' : 'message-success' %>" style="margin-bottom: 20px;" data-testid="order-banner">
+    <div class="message-title"><%= isPending ? 'Purchase Pending' : 'Item Sold' %></div>
+  </div>
+
+  <div class="metadata-list" style="margin-top: 0;" data-testid="order-details">
+    <h3>Order Details</h3>
+    <div class="metadata-item">
+      <span class="metadata-label">Status</span>
+      <span class="metadata-value" style="display: flex; align-items: center; gap: 8px; <%= isPending ? 'color: #8B6914;' : 'color: var(--color-success);' %>">
+        <% if (isPending) { %>
+          <span class="button-spinner" style="width: 12px; height: 12px; border-width: 1px;"></span>
+        <% } %>
+        <%= order.status %>
+      </span>
+    </div>
+    <div class="metadata-item">
+      <span class="metadata-label">Price</span>
+      <span class="metadata-value" style="color: var(--color-accent);"><%= formatSats(order.price_sats) %></span>
+    </div>
+    <div class="metadata-item">
+      <span class="metadata-label">Buyer</span>
+      <span class="metadata-value"><%= order.buyer_address.substring(0, 20) %>...</span>
+    </div>
+    <div class="metadata-item" style="border-bottom: none;">
+      <span class="metadata-label">Transaction</span>
+      <span class="metadata-value">
+        <a href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener"><%= order.txid.substring(0, 20) %>...</a>
+      </span>
+    </div>
+  </div>
+
+  <% const extra = JSON.parse(order.extra_details || '{}') %>
+  <% const optionalPayments = extra.optional_payments || [] %>
+  <% if (optionalPayments.length > 0) { %>
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed var(--color-muted);" data-testid="order-optional-payments">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--color-muted); margin-bottom: 12px;">Additional Payments</div>
+      <% optionalPayments.forEach((p) => { %>
+        <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 0.85rem; border-bottom: 1px dashed var(--color-muted);">
+          <span style="color: var(--color-secondary);"><%= p.title %></span>
+          <span style="font-family: var(--font-mono); color: var(--color-accent);"><%= formatSats(p.amount) %></span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

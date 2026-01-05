@@ -1,0 +1,33 @@
+<section data-testid="policy-page">
+  <div class="section-header" style="margin-bottom: 32px;">
+    <span class="section-ref">SEC-E</span>
+    <h1 class="section-title" data-testid="page-title">Terms & Specifications</h1>
+    <div class="section-line"></div>
+  </div>
+
+  <div style="max-width: 800px;" data-testid="policy-card">
+    <!-- Payment address -->
+    <div class="policy-section" data-ref="ADDR-01" data-testid="policy-title">
+      <h3>Payment Address</h3>
+      <div class="policy-address">
+        <a
+          href="https://ordinals.com/address/<%= walletAddress %>"
+          target="_blank"
+          rel="noopener"
+          data-testid="wallet-address-link"
+        ><%= walletAddress %></a>
+      </div>
+    </div>
+
+    <!-- Policy YAML -->
+    <div class="policy-section" data-ref="CONF-01" data-testid="policy-yaml">
+      <h3>Store Configuration</h3>
+      <pre class="policy-yaml" data-testid="policy-pre"><%= policyYaml %></pre>
+    </div>
+
+    <!-- Additional info -->
+    <div class="policy-note">
+      <p>All transactions are conducted on the Bitcoin blockchain using ordinal inscriptions. Purchases are final once confirmed on-chain. Items are transferred directly to the buyer's wallet address. Network fees are calculated at time of purchase based on current mempool conditions.</p>
+    </div>
+  </div>
+</section>

@@ -15,6 +15,7 @@ import DropdownController from './controllers/dropdown_controller.js'
 import WalletController from './controllers/wallet_controller.js'
 import InscriptionController from './controllers/inscription_controller.js'
 import UsdController from './controllers/usd_controller.js'
+import StickyPurchaseController from './controllers/sticky_purchase_controller.js'
 
 application.register('image', ImageController)
 application.register('body-class', BodyClassController)
@@ -22,6 +23,7 @@ application.register('dropdown', DropdownController)
 application.register('wallet', WalletController)
 application.register('inscription', InscriptionController)
 application.register('usd', UsdController)
+application.register('sticky-purchase', StickyPurchaseController)
 
 window.CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
   style: "currency",

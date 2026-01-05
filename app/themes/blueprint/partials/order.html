@@ -1,0 +1,52 @@
+<div data-testid="order-panel">
+  <% const isPending = order.status === 'pending' %>
+
+  <div class="message <%= isPending ? 'message-pending' : 'message-success' %>" style="margin-bottom: 20px;" data-testid="order-banner">
+    <div class="message-title"><%= isPending ? 'Transaction Pending' : 'Item Sold' %></div>
+  </div>
+
+  <div class="specs-panel" style="margin-top: 0;" data-testid="order-details">
+    <div class="specs-header">Order Details</div>
+    <div class="specs-content">
+      <div class="spec-row">
+        <span class="spec-label">Status</span>
+        <span class="spec-value" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; <%= isPending ? 'color: var(--color-warning);' : 'color: var(--color-success);' %>">
+          <% if (isPending) { %>
+            <span class="button-spinner" style="width: 12px; height: 12px; border-width: 1px;"></span>
+          <% } %>
+          <%= order.status.toUpperCase() %>
+        </span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Price</span>
+        <span class="spec-value" style="color: var(--color-accent);"><%= formatSats(order.price_sats) %></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Buyer</span>
+        <span class="spec-value"><%= order.buyer_address.substring(0, 16) %>...</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-label">Transaction</span>
+        <span class="spec-value">
+          <a href="https://mempool.space/tx/<%= order.txid %>" target="_blank" rel="noopener"><%= order.txid.substring(0, 16) %>...</a>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <% const extra = JSON.parse(order.extra_details || '{}') %>
+  <% const optionalPayments = extra.optional_payments || [] %>
+  <% if (optionalPayments.length > 0) { %>
+    <div class="specs-panel" style="margin-top: 20px;" data-testid="order-optional-payments">
+      <div class="specs-header">Additional Payments</div>
+      <div class="specs-content">
+        <% optionalPayments.forEach((p) => { %>
+          <div class="spec-row">
+            <span class="spec-label"><%= p.title %></span>
+            <span class="spec-value" style="color: var(--color-accent);"><%= formatSats(p.amount) %></span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
+</div>

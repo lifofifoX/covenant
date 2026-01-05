@@ -1,0 +1,98 @@
+<section data-testid="home-page">
+  <!-- Bio Section - Technical Spec Block -->
+  <div class="bio-section" data-testid="about">
+    <div class="bio-content">
+      <div class="bio-avatar">
+        <img src="<%= CONFIG.artist_avatar_url %>" alt="<%= CONFIG.artist_name %>" />
+      </div>
+      <div class="bio-text-content">
+        <h2>Specification Notes</h2>
+        <p class="bio-text" data-testid="artist-about"><%= artist.about %></p>
+        <div class="bio-links" data-testid="artist-social">
+          <% if (artist.socials.websiteUrl) { %>
+            <a href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener" data-testid="artist-social-website">Website</a>
+          <% } %>
+          <% if (artist.socials.xUrl) { %>
+            <a href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener" data-testid="artist-social-x">X / Twitter</a>
+          <% } %>
+          <% if (artist.socials.githubUrl) { %>
+            <a href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener" data-testid="artist-social-github">GitHub</a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collections Section -->
+  <div data-testid="collections">
+    <div class="section-header">
+      <span class="section-ref">SEC-A</span>
+      <h2 class="section-title" data-testid="collections-title">Available Collections</h2>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="dimension-line">
+      <span></span>
+      <span><%= (collections ?? []).length %> COLLECTION<%= (collections ?? []).length !== 1 ? 'S' : '' %> // INSCRIPTIONS INDEX</span>
+      <span></span>
+    </div>
+
+    <div class="blueprint-grid" data-testid="collections-grid">
+      <% (collections ?? []).forEach((collection, index) => { %>
+        <% const coord = String.fromCharCode(65 + Math.floor(index / 4)) + ((index % 4) + 1) %>
+        <a
+          class="catalog-card blueprint-card"
+          href="/<%= encodeURIComponent(collection.slug) %>"
+          data-testid="collection-card"
+          data-collection-slug="<%= collection.slug %>"
+          data-coord="<%= coord %>"
+        >
+          <div class="card-media corner-brackets" data-controller="image">
+            <div style="position: absolute; inset: 8px; background: var(--color-bg-dark);" data-image-target="skeleton"></div>
+            <% if (collection.thumbnail.isImage) { %>
+              <img
+                src="<%= collection.thumbnail.contentUrl %>"
+                alt="<%= collection.title %>"
+                loading="lazy"
+                decoding="async"
+                style="image-rendering: pixelated"
+                class="opacity-0 transition-opacity duration-300"
+                data-image-target="img"
+                data-action="load->image#loaded error->image#error"
+                data-testid="collection-thumb"
+              />
+            <% } else { %>
+              <iframe
+                src="<%= collection.thumbnail.previewUrl %>"
+                class="pointer-events-none opacity-0 transition-opacity duration-300"
+                loading="lazy"
+                allow="accelerometer; gyroscope"
+                data-image-target="media"
+                data-action="load->image#loaded error->image#error"
+                data-testid="collection-thumb"
+              ></iframe>
+            <% } %>
+          </div>
+          <div class="card-info">
+            <div class="card-id">#ORD-<%= String(index + 1).padStart(4, '0') %></div>
+            <div class="card-title" data-testid="collection-title">
+              <%= collection.title %>
+              <% if (collection.hasGallery) { %>
+                <span data-testid="collection-gallery-icon" aria-label="Gallery collection">&#128444;</span>
+              <% } else if (collection.hasParent) { %>
+                <span data-testid="collection-parent-icon" aria-label="Parent collection">&#129516;</span>
+              <% } %>
+            </div>
+            <div class="card-price-row">
+              <span class="card-price" data-testid="collection-price"><%= formatSats(collection.priceSats) %></span>
+              <span class="status-badge available" data-testid="collection-available">
+                <span class="status-dot"></span>
+                <%= collection.availableCount %> avail
+              </span>
+            </div>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,121 @@
+<section data-testid="inscriptions-page">
+  <h2 class="sr-only" data-testid="page-title">Collection</h2>
+
+  <!-- Collection Header with Technical Specs -->
+  <% if (collection.parent_inscription_id || collection.gallery_inscription_id) { %>
+    <% const isGallery = Boolean(collection.gallery_inscription_id) %>
+    <% const bannerId = isGallery ? collection.gallery_inscription_id : collection.parent_inscription_id %>
+    <div class="collection-header" data-testid="parent-banner">
+      <div class="collection-header-content">
+        <div class="collection-header-thumb" data-testid="parent-thumb-link">
+          <img
+            src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            style="image-rendering: pixelated;"
+            data-testid="parent-thumb"
+          />
+        </div>
+        <div class="collection-header-info" data-testid="parent-meta">
+          <h1 data-testid="parent-collection-link"><%= collection.title %></h1>
+          <p>
+            <% if (isGallery) { %>
+              Gallery collection with on-chain provenance verification.
+            <% } else { %>
+              Parent-child collection with on-chain provenance.
+              <% if (parentInscription.isSealed) { %>
+                This collection is sealed.
+              <% } %>
+            <% } %>
+          </p>
+          <div class="collection-stats" data-testid="parent-info">
+            <div class="collection-stat">
+              <div class="collection-stat-value">
+                <% if (isGallery) { %>
+                  <%= new Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %>
+                <% } else { %>
+                  <%= new Intl.NumberFormat('en-US').format(parentInscription.childCount) %>
+                <% } %>
+              </div>
+              <div class="collection-stat-label" data-testid="parent-children">Total Works</div>
+            </div>
+            <div class="collection-stat">
+              <div class="collection-stat-value"><%= collection.itemsCount ?? 0 %></div>
+              <div class="collection-stat-label">Available</div>
+            </div>
+            <div class="collection-stat">
+              <div class="collection-stat-value"><%= formatSats(collection.price_sats).replace(' sats', '') %></div>
+              <div class="collection-stat-label">Floor (sats)</div>
+            </div>
+          </div>
+          <div style="margin-top: 16px;">
+            <a
+              href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+              target="_blank"
+              rel="noopener"
+              style="font-size: 11px; color: var(--color-accent); font-family: var(--font-display); letter-spacing: 1px;"
+              data-testid="parent-ordinals-number-link"
+            >VIEW ON ORDINALS #<%= parentInscription.number %></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- Simple header for non-parent collections -->
+    <div class="section-header" style="margin-bottom: 32px;">
+      <span class="section-ref">SEC-B</span>
+      <h1 class="section-title"><%= collection.title %></h1>
+      <div class="section-line"></div>
+      <span class="section-count"><%= collection.itemsCount ?? 0 %> items</span>
+    </div>
+  <% } %>
+
+  <% if ((collection.itemsCount ?? 0) === 0) { %>
+    <div class="empty-state" data-testid="empty-state">
+      <div data-testid="empty-title">NO INSCRIPTIONS AVAILABLE IN THIS COLLECTION</div>
+    </div>
+  <% } else { %>
+    <div class="blueprint-grid" data-testid="grid">
+      <%- collection.itemsHtml %>
+    </div>
+  <% } %>
+
+  <% if ((collection.itemsCount ?? 0) > 0 && (pagination.totalPages ?? 1) > 1) { %>
+    <div class="pagination" data-testid="pagination">
+      <a
+        class="btn btn-small <%= pagination.hasPrev ? '' : 'invisible' %>"
+        href="<%= pagination.prevUrl %>"
+        data-testid="prev-page"
+        data-action="click->store#paginate"
+      >&larr; Prev</a>
+
+      <div style="display: flex; gap: 4px;" data-testid="page-links">
+        <% if ((pagination.pages ?? []).length > 0) { %>
+          <% pagination.pages.forEach((pageLink) => { %>
+            <% if (pageLink.type === 'gap') { %>
+              <span style="padding: 8px; color: var(--color-muted);">...</span>
+            <% } else { %>
+              <a
+                class="btn btn-small <%= pageLink.isActive ? 'active' : '' %>"
+                href="<%= pageLink.url %>"
+                data-testid="page-link"
+                data-page="<%= pageLink.n %>"
+                data-action="click->store#paginate"
+              ><%= pageLink.n %></a>
+            <% } %>
+          <% }) %>
+        <% } else { %>
+          <span class="btn btn-small active" data-store-target="page"><%= pagination.page %></span>
+        <% } %>
+      </div>
+
+      <a
+        class="btn btn-small <%= pagination.hasNext ? '' : 'invisible' %>"
+        href="<%= pagination.nextUrl %>"
+        data-testid="next-page"
+        data-action="click->store#paginate"
+      >Next &rarr;</a>
+    </div>
+  <% } %>
+</section>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="<%= assets.css %>" />
+    <script type="module" src="<%= assets.js %>"></script>
+  </head>
+  <body
+    data-controller="store body-class usd wallet"
+    data-action="wallet:connected@window->body-class#setConnected wallet:disconnected@window->body-class#setDisconnected keydown.esc@window->wallet#close mouseup@document->wallet#closeIfClickedOutside"
+    class="theme-zine"
+  >
+    <div class="xerox-overlay"></div>
+
+    <!-- Wallet Modal - outside header to avoid transform stacking context -->
+    <div
+      data-wallet-target="selector"
+      data-state="closed"
+      class="wallet-modal-overlay"
+    >
+      <div class="wallet-backdrop" data-action="click->wallet#close"></div>
+      <div class="wallet-panel">
+        <button class="wallet-panel-close" type="button" aria-label="Close" data-action="wallet#close">&times;</button>
+        <div class="wallet-panel-header">
+          <div class="wallet-panel-title">Select Your Wallet</div>
+        </div>
+        <div class="wallet-panel-body">
+          <button class="wallet-option" data-wallet-target="xverse" data-action="wallet#authorize:prevent" data-wallet-provider-param="xverse">
+            <img src="/wallets/xverse.png" alt="" />
+            <span class="wallet-name">Xverse Wallet</span>
+          </button>
+          <button class="wallet-option" data-wallet-target="unisat" data-action="wallet#authorize:prevent" data-wallet-provider-param="unisat">
+            <img src="/wallets/unisat.png" alt="" />
+            <span class="wallet-name">Unisat Wallet</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rough Banner Header -->
+    <header class="header" data-testid="topbar">
+      <div class="header-inner">
+        <a href="/" class="logo" data-testid="home-link">
+          <span data-testid="brand-title"><%= CONFIG.artist_name %></span>
+          <span class="logo-issue">ISSUE #001</span>
+        </a>
+
+        <nav class="nav" data-testid="header-nav">
+          <div class="nav-links-desktop">
+            <a class="nav-link active" href="/" data-testid="nav-home">Home</a>
+            <a class="nav-link" href="/activity" data-testid="nav-activity">Activity</a>
+            <a class="nav-link" href="/policy" data-testid="nav-policy">Policy</a>
+          </div>
+
+          <div data-testid="header-right" style="display: flex; align-items: center; gap: 8px;">
+            <div data-testid="connect-slot">
+              <div class="hide-on-connected">
+                <button class="connect-btn" data-action="wallet#select">Connect</button>
+              </div>
+
+              <div class="show-on-connected">
+                <div style="position: relative; z-index: 30; display: inline-flex;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+                  <button class="connect-btn" data-action="dropdown#toggle">
+                    <span data-wallet-target="addressPreview"></span>
+                    <span style="opacity: 0.5; margin-left: 6px;">&#9662;</span>
+                  </button>
+                  <div class="dropdown-menu absolute right-0 top-full mt-2 w-44 hidden" data-dropdown-target="menu">
+                    <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mobile menu -->
+            <div style="position: relative;" class="md:hidden" data-controller="dropdown" data-action="mouseup@window->dropdown#hide" data-testid="nav-menu">
+              <button
+                class="connect-btn"
+                type="button"
+                aria-label="Menu"
+                data-action="dropdown#toggle"
+                data-testid="nav-menu-button"
+                style="padding: 0.5rem 0.75rem;"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="square"/>
+                  <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="square"/>
+                  <path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="square"/>
+                </svg>
+              </button>
+              <div class="dropdown-menu absolute right-0 top-full mt-2 w-44 hidden" data-dropdown-target="menu" data-testid="nav-menu-list">
+                <a class="dropdown-item" href="/" data-testid="nav-menu-home">Home</a>
+                <a class="dropdown-item" href="/activity" data-testid="nav-menu-activity">Activity</a>
+                <a class="dropdown-item" href="/policy" data-testid="nav-menu-policy">Policy</a>
+              </div>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main class="main-content" data-store-target="main">
+      <%- body %>
+    </main>
+
+    <footer class="app-footer" data-testid="footer">
+      <p data-testid="footer-brand">Powered by <a href="https://github.com/lifofifoX/covenant" target="_blank" rel="noopener" data-testid="footer-blizzard">Covenant</a></p>
+      <p style="font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.7;">
+        <a href="https://wizards.art/" target="_blank" rel="noopener" data-testid="footer-wizards">The Wizards of Ord</a>
+      </p>
+    </footer>
+  </body>
+</html>

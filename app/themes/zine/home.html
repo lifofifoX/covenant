@@ -1,0 +1,88 @@
+<section data-testid="home-page">
+  <!-- Hero Banner with Artist Info -->
+  <div class="hero-banner" data-testid="about">
+    <div class="artist-intro">
+      <div class="artist-avatar">
+        <img src="<%= CONFIG.artist_avatar_url %>" alt="<%= CONFIG.artist_name %>" />
+      </div>
+      <div class="artist-bio">
+        <h1><%= CONFIG.artist_name %></h1>
+        <p class="artist-tagline">Inscribing chaos onto the eternal ledger</p>
+        <p class="artist-text" data-testid="artist-about"><%= artist.about %></p>
+        <div class="artist-links" data-testid="artist-social">
+          <% if (artist.socials.websiteUrl) { %>
+            <a href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener" data-testid="artist-social-website">Website</a>
+          <% } %>
+          <% if (artist.socials.xUrl) { %>
+            <a href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener" data-testid="artist-social-x">X / Twitter</a>
+          <% } %>
+          <% if (artist.socials.githubUrl) { %>
+            <a href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener" data-testid="artist-social-github">GitHub</a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cut Line -->
+  <div class="cut-line"><span>[ CUT HERE ]</span></div>
+
+  <!-- Collections Section -->
+  <div data-testid="collections">
+    <div class="section-header">
+      <h2 class="section-title" data-testid="collections-title">Collections</h2>
+      <span class="section-count"><%= (collections ?? []).length %> collection<%= (collections ?? []).length !== 1 ? 's' : '' %></span>
+    </div>
+
+    <div class="collections-grid" data-testid="collections-grid">
+      <% (collections ?? []).forEach((collection, index) => { %>
+        <a
+          class="collection-card"
+          href="/<%= encodeURIComponent(collection.slug) %>"
+          data-testid="collection-card"
+          data-collection-slug="<%= collection.slug %>"
+          data-number="#<%= String(index + 1).padStart(2, '0') %>"
+        >
+          <div class="card-image" data-controller="image">
+            <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #ddd 25%, #eee 50%, #ddd 75%);" data-image-target="skeleton"></div>
+            <% if (collection.thumbnail.isImage) { %>
+              <img
+                src="<%= collection.thumbnail.contentUrl %>"
+                alt="<%= collection.title %>"
+                loading="lazy"
+                decoding="async"
+                style="image-rendering: pixelated"
+                class="opacity-0 transition-opacity duration-300"
+                data-image-target="img"
+                data-action="load->image#loaded error->image#error"
+                data-testid="collection-thumb"
+              />
+            <% } else { %>
+              <iframe
+                src="<%= collection.thumbnail.previewUrl %>"
+                class="pointer-events-none opacity-0 transition-opacity duration-300"
+                loading="lazy"
+                allow="accelerometer; gyroscope"
+                data-image-target="media"
+                data-action="load->image#loaded error->image#error"
+                data-testid="collection-thumb"
+              ></iframe>
+            <% } %>
+          </div>
+          <h3 class="card-title" data-testid="collection-title">
+            <%= collection.title %>
+            <% if (collection.hasGallery) { %>
+              <span data-testid="collection-gallery-icon" aria-label="Gallery collection">&#128444;</span>
+            <% } else if (collection.hasParent) { %>
+              <span data-testid="collection-parent-icon" aria-label="Parent collection">&#129516;</span>
+            <% } %>
+          </h3>
+          <div class="card-meta">
+            <span data-testid="collection-available"><%= collection.availableCount %> available</span>
+            <span class="card-price" data-testid="collection-price"><%= formatSats(collection.priceSats) %></span>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>

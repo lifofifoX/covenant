@@ -50,6 +50,7 @@
 dist/
 generated/
 .wrangler/
+.localflare/
 public/javascript/
 public/assets/
 public/*.css
