@@ -1,0 +1,19 @@
+<tr data-testid="inscription-card" data-inscription-id="<%= inscription.id %>">
+  <td>
+    <a href="/<%= encodeURIComponent(collection.slug) %>/<%= encodeURIComponent(inscription.id) %>">
+      <%= inscription.id.substring(0, 12) %>...
+    </a>
+  </td>
+  <td data-testid="inscription-title"><%= inscription.title %></td>
+  <td>#<%= new Intl.NumberFormat('en-US').format(inscription.number) %></td>
+  <td>
+    <% if (order && order.status === 'pending') { %>
+      <span class="stamp stamp-pending">PENDING</span>
+    <% } else if (order && order.status === 'confirmed') { %>
+      <span class="stamp stamp-sold">SOLD</span>
+    <% } else { %>
+      <span class="stamp stamp-available">AVAILABLE</span>
+    <% } %>
+  </td>
+  <td data-testid="inscription-price"><strong><%= formatSats(collection.price_sats).replace(' sats', '') %></strong> SATS</td>
+</tr>

@@ -1,0 +1,44 @@
+<a
+  class="inscription-card window"
+  href="/<%= encodeURIComponent(collection.slug) %>/<%= encodeURIComponent(inscription.id) %>"
+  data-testid="inscription-card"
+  data-inscription-id="<%= inscription.id %>"
+>
+  <div class="window-titlebar">
+    <span class="window-title">inscription_<%= inscription.number %></span>
+    <div class="window-controls">
+      <button class="window-btn">×</button>
+    </div>
+  </div>
+  <div class="inscription-image" data-controller="image">
+    <div class="inscription-skeleton" data-image-target="skeleton"></div>
+    <% if (inscription.isImage) { %>
+      <img
+        src="<%= inscription.contentUrl %>"
+        alt="<%= inscription.title %>"
+        loading="lazy"
+        class="opacity-0 transition-opacity duration-300"
+        data-image-target="img"
+        data-action="load->image#loaded error->image#error"
+      />
+    <% } else { %>
+      <iframe
+        src="<%= inscription.previewUrl %>"
+        class="pointer-events-none opacity-0 transition-opacity duration-300"
+        data-image-target="media"
+        data-action="load->image#loaded error->image#error"
+      ></iframe>
+    <% } %>
+  </div>
+  <div class="inscription-info">
+    <div class="inscription-number" data-testid="inscription-title">#<%= new Intl.NumberFormat('en-US').format(inscription.number) %></div>
+    <div class="inscription-price" data-testid="inscription-price"><%= formatSats(collection.price_sats).replace(' sats', '') %><span class="sats">sats</span></div>
+    <% if (order && order.status === 'pending') { %>
+      <span class="badge badge-pending">Pending</span>
+    <% } else if (order && order.status === 'confirmed') { %>
+      <span class="badge badge-sold">Sold</span>
+    <% } else { %>
+      <span class="badge badge-available">Available</span>
+    <% } %>
+  </div>
+</a>

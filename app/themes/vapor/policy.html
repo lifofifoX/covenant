@@ -1,0 +1,53 @@
+<section data-testid="policy-page">
+  <div class="section">
+    <h2 class="section-title" data-testid="page-title">
+      Store Policy
+      <span class="section-title-jp">ポリシー</span>
+    </h2>
+
+    <div class="window">
+      <div class="window-titlebar">
+        <div class="window-title">
+          <div class="window-title-icon"></div>
+          policy.txt - Notepad
+        </div>
+        <div class="window-controls">
+          <button class="window-btn">_</button>
+          <button class="window-btn">□</button>
+          <button class="window-btn">×</button>
+        </div>
+      </div>
+      <div class="window-content policy-content" data-testid="policy-card">
+        <h3>Payment Address // 支払いアドレス</h3>
+        <p data-testid="policy-title">All payments are processed to the following Bitcoin address:</p>
+
+        <div class="wallet-address-box">
+          <span class="wallet-address" data-testid="wallet-address-link"><%= walletAddress %></span>
+          <button class="btn-copy" type="button" onclick="navigator.clipboard.writeText('<%= walletAddress %>')">Copy</button>
+        </div>
+
+        <h3>Terms of Service // 利用規約</h3>
+        <p>
+          All sales are final. Once a transaction is confirmed on the Bitcoin blockchain,
+          ownership of the inscription transfers to the buyer's wallet address.
+          全ての販売は最終的なものです。
+        </p>
+
+        <h3>Authenticity // 真正性</h3>
+        <p>
+          Each inscription sold through this marketplace is verified to be owned by
+          <%= CONFIG.artist_name %>. Provenance is guaranteed through on-chain verification.
+        </p>
+
+        <h3>Network // ネットワーク</h3>
+        <p>
+          Network: Bitcoin Mainnet<br/>
+          Accepted Wallets: Unisat, Xverse
+        </p>
+
+        <h3>Configuration // 設定</h3>
+        <pre class="policy-yaml" data-testid="policy-pre"><%= policyYaml %></pre>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,105 @@
+<section data-testid="home-page">
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-window window">
+      <div class="window-titlebar">
+        <div class="window-title">
+          <div class="window-title-icon"></div>
+          artist_profile.exe
+        </div>
+        <div class="window-controls">
+          <button class="window-btn">_</button>
+          <button class="window-btn">□</button>
+          <button class="window-btn">×</button>
+        </div>
+      </div>
+      <div class="window-content">
+        <% if (CONFIG.artist_avatar_url) { %>
+          <div class="artist-avatar">
+            <img src="<%= CONFIG.artist_avatar_url %>" alt="<%= CONFIG.artist_name %>" />
+          </div>
+        <% } %>
+        <h1 class="artist-name"><%= CONFIG.artist_name %></h1>
+        <% if (artist.about) { %>
+          <p class="artist-bio" data-testid="artist-about">
+            <%= artist.about %>
+            <span class="jp">デジタルアーティファクト // 永遠に保存</span>
+          </p>
+        <% } %>
+        <% if (artist.socials.websiteUrl || artist.socials.xUrl || artist.socials.githubUrl) { %>
+          <div class="artist-links" data-testid="artist-social">
+            <% if (artist.socials.websiteUrl) { %>
+              <a href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener" data-testid="artist-social-website">Website</a>
+            <% } %>
+            <% if (artist.socials.xUrl) { %>
+              <a href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener" data-testid="artist-social-x">X/Twitter</a>
+            <% } %>
+            <% if (artist.socials.githubUrl) { %>
+              <a href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener" data-testid="artist-social-github">GitHub</a>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Divider -->
+  <div class="section-divider">
+    <span class="section-divider-text">COLLECTIONS // コレクション</span>
+  </div>
+
+  <!-- Collections Grid -->
+  <div class="section">
+    <h2 class="section-title" data-testid="collections-title">
+      Browse Collections
+      <span class="section-title-jp">美学</span>
+    </h2>
+
+    <% if ((collections ?? []).length === 0) { %>
+      <div class="empty-state">
+        <p>NO COLLECTIONS AVAILABLE // コレクションなし</p>
+      </div>
+    <% } else { %>
+      <div class="collections-grid" data-testid="collections">
+        <% (collections ?? []).forEach((collection) => { %>
+          <a
+            class="collection-window window"
+            href="/<%= encodeURIComponent(collection.slug) %>"
+            data-testid="collection-card"
+            data-collection-slug="<%= collection.slug %>"
+          >
+            <div class="window-titlebar">
+              <div class="window-title">
+                <div class="window-title-icon"></div>
+                <%= collection.slug %>.exe
+              </div>
+              <div class="window-controls">
+                <button class="window-btn">_</button>
+                <button class="window-btn">□</button>
+                <button class="window-btn">×</button>
+              </div>
+            </div>
+            <div class="collection-preview">
+              <span class="collection-preview-icon">
+                <% if (collection.hasGallery) { %>
+                  🖼️
+                <% } else if (collection.hasParent) { %>
+                  💎
+                <% } else { %>
+                  ⭐
+                <% } %>
+              </span>
+            </div>
+            <div class="collection-info">
+              <h3 class="collection-name" data-testid="collection-title"><%= collection.title %></h3>
+              <div class="collection-stats">
+                <span class="stat"><%= collection.availableCount %><span class="stat-label">items</span></span>
+                <span class="stat" data-testid="collection-price"><%= formatSats(collection.priceSats).replace(' sats', '') %><span class="stat-label">sats</span></span>
+              </div>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>

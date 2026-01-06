@@ -1,0 +1,79 @@
+<section data-testid="policy-page">
+  <!-- Document Header -->
+  <div class="doc-header" data-testid="header-right">
+    <div class="section-label">REGISTRY // POLICY</div>
+    <div class="doc-header-row">
+      <div>
+        <div class="doc-number">DOC-<%= new Date().getFullYear() %>-POL // OFFICIAL POLICY</div>
+        <div class="doc-title" data-testid="page-title">Acquisition Protocol</div>
+        <div class="doc-date">Effective Date: <%= new Date().toISOString().split('T')[0] %></div>
+      </div>
+      <div class="hide-on-connected">
+        <button class="classification-stamp connect-stamp" data-action="wallet#select">Connect Wallet</button>
+      </div>
+      <div class="show-on-connected">
+        <div style="position: relative;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+          <button class="classification-stamp connected-stamp" data-action="dropdown#toggle">
+            <span data-wallet-target="addressPreview"></span>
+          </button>
+          <div class="dropdown-menu hidden" data-dropdown-target="menu">
+            <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" data-testid="header-nav">
+    <a class="tab" href="/">All Collections</a>
+    <a class="tab" href="/activity">Activity Log</a>
+    <a class="tab active" href="/policy">Policy</a>
+  </nav>
+
+  <!-- Content Area -->
+  <div class="tab-content" data-testid="policy-card">
+    <!-- Payment address -->
+    <div class="policy-section" data-testid="policy-title">
+      <h3>Section 1: Payment Information</h3>
+      <div class="field-row">
+        <span class="field-label">Payment Address:</span>
+        <span class="field-value">
+          <a
+            href="https://ordinals.com/address/<%= walletAddress %>"
+            target="_blank"
+            rel="noopener"
+            data-testid="wallet-address-link"
+            style="word-break: break-all;"
+          ><%= walletAddress %></a>
+        </span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Network:</span>
+        <span class="field-value">Bitcoin Mainnet</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Accepted Wallets:</span>
+        <span class="field-value">Unisat, Xverse</span>
+      </div>
+    </div>
+
+    <!-- Policy YAML -->
+    <div class="policy-section" data-testid="policy-yaml">
+      <h3>Section 2: Store Configuration</h3>
+      <pre class="policy-yaml" data-testid="policy-pre"><%= policyYaml %></pre>
+    </div>
+
+    <!-- Additional info -->
+    <div class="policy-section">
+      <h3>Section 3: Transaction Terms</h3>
+      <ol style="font-size: 12px; line-height: 2; margin-left: 20px; color: var(--color-secondary);">
+        <li>All transactions are final and irreversible upon blockchain confirmation.</li>
+        <li>Buyer assumes responsibility for providing correct receiving address.</li>
+        <li>Prices are denominated in satoshis (SATS) and subject to change.</li>
+        <li>Transaction fees are the responsibility of the buyer.</li>
+        <li>Artifacts are transferred via PSBT (Partially Signed Bitcoin Transaction).</li>
+      </ol>
+    </div>
+  </div>
+</section>

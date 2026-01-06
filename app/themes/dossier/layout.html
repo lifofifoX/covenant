@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="<%= assets.css %>" />
+    <script type="module" src="<%= assets.js %>"></script>
+  </head>
+  <body
+    data-controller="store body-class usd wallet"
+    data-action="wallet:connected@window->body-class#setConnected wallet:disconnected@window->body-class#setDisconnected keydown.esc@window->wallet#close"
+    class="theme-dossier"
+  >
+    <!-- Wallet Modal -->
+    <div data-wallet-target="selector" data-state="closed">
+      <div class="wallet-backdrop" data-action="click->wallet#close"></div>
+      <div class="wallet-panel">
+        <div class="wallet-header">
+          <span class="wallet-title">FORM W-001 // WALLET AUTHORIZATION</span>
+          <button class="wallet-close" type="button" aria-label="Close" data-action="wallet#close">&times;</button>
+        </div>
+        <div class="wallet-body">
+          <button class="wallet-option" data-wallet-target="xverse" data-action="wallet#authorize:prevent" data-wallet-provider-param="xverse">
+            <div class="wallet-icon">
+              <img src="/wallets/xverse.png" alt="" />
+            </div>
+            <div class="wallet-info">
+              <div class="wallet-name">Xverse Wallet</div>
+              <div class="wallet-desc">Connect using Xverse</div>
+            </div>
+          </button>
+          <button class="wallet-option" data-wallet-target="unisat" data-action="wallet#authorize:prevent" data-wallet-provider-param="unisat">
+            <div class="wallet-icon">
+              <img src="/wallets/unisat.png" alt="" />
+            </div>
+            <div class="wallet-info">
+              <div class="wallet-name">Unisat Wallet</div>
+              <div class="wallet-desc">Connect using Unisat</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centered Masthead Header -->
+    <div class="page-title-bar" data-testid="topbar">
+      <div class="page-title-inner">
+        <div class="case-file-number">CASE FILE NO. <%= CONFIG.artist_name.toUpperCase().replace(/\s+/g, '-') %>-MARKETPLACE</div>
+        <a href="/" class="page-title-name" data-testid="home-link"><%= CONFIG.artist_name.toUpperCase() %></a>
+        <div class="page-title-tagline">Inscriptions Marketplace</div>
+        <!-- Mobile header buttons -->
+        <div class="mobile-header-buttons">
+          <!-- Connect button -->
+          <button class="mobile-connect-btn hide-on-connected" type="button" data-action="wallet#select">
+            CONNECT
+          </button>
+          <div class="mobile-connected-btn show-on-connected" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+            <button class="mobile-connect-btn" type="button" data-action="dropdown#toggle">
+              <span data-wallet-target="addressPreview"></span>
+            </button>
+            <div class="dropdown-menu hidden" data-dropdown-target="menu">
+              <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+            </div>
+          </div>
+          <!-- Nav menu -->
+          <div class="mobile-nav" data-controller="dropdown" data-action="mouseup@window->dropdown#hide" data-testid="nav-menu">
+            <button class="mobile-menu-btn" type="button" aria-label="Menu" data-action="dropdown#toggle" data-testid="nav-menu-button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="dropdown-menu hidden" data-dropdown-target="menu" data-testid="nav-menu-list">
+              <a class="dropdown-item" href="/" data-testid="nav-menu-home">Collections</a>
+              <a class="dropdown-item" href="/activity" data-testid="nav-menu-activity">Activity Log</a>
+              <a class="dropdown-item" href="/policy" data-testid="nav-menu-policy">Policy</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Page -->
+    <div class="page-section">
+      <!-- Hole Punches -->
+      <div class="hole-punches">
+        <div class="hole-punch"></div>
+        <div class="hole-punch"></div>
+        <div class="hole-punch"></div>
+      </div>
+
+      <!-- Main Content -->
+      <main data-store-target="main">
+        <%- body %>
+      </main>
+
+      <!-- Document Footer -->
+      <div class="doc-footer" data-testid="footer">
+        <span>PAGE 1 OF 1</span>
+        <span data-testid="footer-brand">
+          <a href="https://github.com/lifofifoX/covenant" target="_blank" rel="noopener" data-testid="footer-blizzard">Covenant</a>
+        </span>
+        <span>UNCLASSIFIED</span>
+      </div>
+    </div>
+  </body>
+</html>

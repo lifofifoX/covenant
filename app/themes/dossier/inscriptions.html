@@ -1,0 +1,81 @@
+<section data-testid="inscriptions-page">
+  <h2 class="sr-only" data-testid="page-title">Collection</h2>
+
+  <!-- Document Header -->
+  <div class="doc-header" data-testid="header-right">
+    <div class="section-label">MANIFEST // COLLECTION</div>
+    <div class="doc-header-row">
+      <div>
+        <div class="doc-number">DOC-<%= new Date().getFullYear() %>-<%= collection.slug.toUpperCase().substring(0, 6) %> // COLLECTION MANIFEST</div>
+        <div class="doc-title"><%= collection.title %></div>
+        <div class="doc-date">
+          <% if (collection.parent_inscription_id || collection.gallery_inscription_id) { %>
+            <% const isGallery = Boolean(collection.gallery_inscription_id) %>
+            <% if (isGallery) { %>
+              <%= new Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %> Total //
+            <% } else { %>
+              <%= new Intl.NumberFormat('en-US').format(parentInscription.childCount) %> Total //
+            <% } %>
+          <% } %>
+          <%= collection.itemsCount ?? 0 %> Available // Floor: <%= formatSats(collection.price_sats) %>
+        </div>
+      </div>
+      <div class="hide-on-connected">
+        <button class="classification-stamp connect-stamp" data-action="wallet#select">Connect Wallet</button>
+      </div>
+      <div class="show-on-connected">
+        <div style="position: relative;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+          <button class="classification-stamp connected-stamp" data-action="dropdown#toggle">
+            <span data-wallet-target="addressPreview"></span>
+          </button>
+          <div class="dropdown-menu hidden" data-dropdown-target="menu">
+            <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inscriptions Table -->
+  <% if ((collection.itemsCount ?? 0) === 0) { %>
+    <div class="empty-state" data-testid="empty-state">
+      <p data-testid="empty-title">NO INSCRIPTIONS AVAILABLE IN THIS COLLECTION</p>
+    </div>
+  <% } else { %>
+    <table class="data-table" data-testid="grid">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Inscription #</th>
+          <th>Status</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%- collection.itemsHtml %>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <% if ((pagination.totalPages ?? 1) > 1) { %>
+      <div class="pagination-bar" data-testid="pagination">
+        <span>SHOWING <%= ((pagination.page - 1) * pagination.pageSize) + 1 %>-<%= Math.min(pagination.page * pagination.pageSize, collection.itemsCount) %> OF <%= collection.itemsCount %></span>
+        <span>
+          [ <a href="<%= pagination.prevUrl %>" class="<%= pagination.hasPrev ? '' : 'disabled' %>" data-action="click->store#paginate" data-testid="prev-page">PREV</a>
+          <% if ((pagination.pages ?? []).length > 0) { %>
+            <% pagination.pages.forEach((pageLink) => { %>
+              <% if (pageLink.type === 'gap') { %>
+                | ...
+              <% } else { %>
+                | <a href="<%= pageLink.url %>" class="<%= pageLink.isActive ? 'active' : '' %>" data-action="click->store#paginate" data-testid="page-link"><%= pageLink.n %></a>
+              <% } %>
+            <% }) %>
+          <% } %>
+          | <a href="<%= pagination.nextUrl %>" class="<%= pagination.hasNext ? '' : 'disabled' %>" data-action="click->store#paginate" data-testid="next-page">NEXT</a> ]
+        </span>
+        <span>REF-<%= collection.slug.toUpperCase().substring(0, 8) %></span>
+      </div>
+    <% } %>
+  <% } %>
+</section>

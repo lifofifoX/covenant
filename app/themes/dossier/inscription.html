@@ -1,0 +1,219 @@
+<section
+  data-testid="inscription-page"
+  data-controller="inscription"
+  data-action="wallet:connected@window->inscription#onWalletConnected wallet:disconnected@window->inscription#onWalletDisconnected"
+  data-inscription-price-value="<%= checkout.priceSats %>"
+  data-inscription-inscription-metadata-value="<%= JSON.stringify(inscription.metadata) %>"
+  data-inscription-payment-address-value="<%= config.payment_address %>"
+>
+  <!-- Document Header -->
+  <div class="doc-header" data-testid="header-right">
+    <div class="section-label">ARTIFACT // RECORD</div>
+    <div class="doc-header-row">
+      <div>
+        <div class="doc-number">DOC-<%= new Date().getFullYear() %>-<%= inscription.number %> // ARTIFACT RECORD</div>
+        <div class="doc-title" data-testid="page-title"><%= title %></div>
+        <div class="doc-date">Inscription #<%= new Intl.NumberFormat('en-US').format(inscription.number) %> // <%= config.title %></div>
+      </div>
+      <div class="hide-on-connected">
+        <button class="classification-stamp connect-stamp" data-action="wallet#select">Connect Wallet</button>
+      </div>
+      <div class="show-on-connected">
+        <div style="position: relative;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+          <button class="classification-stamp connected-stamp" data-action="dropdown#toggle">
+            <span data-wallet-target="addressPreview"></span>
+          </button>
+          <div class="dropdown-menu hidden" data-dropdown-target="menu">
+            <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="two-col">
+    <!-- Left: Artifact Preview -->
+    <div>
+      <div class="inscription-preview" data-testid="media" data-controller="image">
+        <div class="inscription-inner">
+          <div class="inscription-skeleton" data-image-target="skeleton"></div>
+          <% if (inscription.isImage) { %>
+            <img
+              src="<%= inscription.contentUrl %>"
+              alt="<%= title %>"
+              loading="eager"
+              decoding="async"
+              class="inscription-media opacity-0 transition-opacity duration-300"
+              data-image-target="img"
+              data-action="load->image#loaded error->image#error"
+              data-testid="inscription-media-img"
+            />
+          <% } else { %>
+            <iframe
+              src="<%= inscription.previewUrl %>"
+              class="inscription-media pointer-events-none opacity-0 transition-opacity duration-300"
+              allow="accelerometer; gyroscope"
+              data-image-target="media"
+              data-action="load->image#loaded error->image#error"
+              data-testid="inscription-media-iframe"
+            ></iframe>
+          <% } %>
+        </div>
+      </div>
+      <div class="exhibit-link">
+        From: <a href="/<%= encodeURIComponent(config.slug) %>"><%= config.title %></a>
+      </div>
+    </div>
+
+    <!-- Right: Specs & Purchase -->
+    <div>
+      <div class="field-section" data-testid="details">
+        <div class="field-row" data-testid="detail-id">
+          <div class="field-label">Inscription ID:</div>
+          <div class="field-value">
+            <a href="https://ordinals.com/inscription/<%= encodeURIComponent(inscription.id) %>" target="_blank" rel="noopener" data-testid="detail-id-link"><%= inscription.id.substring(0, 16) %>...i0</a>
+          </div>
+        </div>
+        <div class="field-row" data-testid="detail-number">
+          <div class="field-label">Number:</div>
+          <div class="field-value">
+            <a href="https://ordinals.com/inscription/<%= encodeURIComponent(inscription.id) %>" target="_blank" rel="noopener" data-testid="detail-number-link">#<%= new Intl.NumberFormat('en-US').format(inscription.number) %></a>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Collection:</div>
+          <div class="field-value"><%= config.title %></div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Content Type:</div>
+          <div class="field-value"><%= inscription.contentType || 'Unknown' %></div>
+        </div>
+        <div class="field-row" data-testid="detail-sat">
+          <div class="field-label">Sat Number:</div>
+          <div class="field-value">
+            <a href="https://ordinals.com/sat/<%= encodeURIComponent(inscription.sat) %>" target="_blank" rel="noopener" data-testid="detail-sat-link"><%= inscription.sat %></a>
+          </div>
+        </div>
+        <div class="field-row" data-testid="detail-inscribed">
+          <div class="field-label">Inscribed:</div>
+          <% const inscribedHuman = new Date(inscription.timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) %>
+          <div class="field-value" data-testid="detail-inscribed-value"><%= inscribedHuman %></div>
+        </div>
+        <% if (inscription.charmIcons.length > 0) { %>
+          <div class="field-row" data-testid="detail-charms">
+            <div class="field-label">Charms:</div>
+            <div class="field-value" style="font-size: 16px;" data-testid="detail-charms-icons">
+              <% inscription.charmIcons.forEach((icon) => { %>
+                <span><%= icon %></span>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+        <% if (inscription.parents.length > 0) { %>
+          <div class="field-row" data-testid="detail-parents">
+            <div class="field-label">Parents:</div>
+            <div class="field-value" data-testid="detail-parents-list">
+              <% inscription.parents.forEach((parentId) => { %>
+                <a href="https://ordinals.com/inscription/<%= encodeURIComponent(parentId) %>" target="_blank" rel="noopener" title="<%= parentId %>" data-testid="detail-parent-link" style="display: block;"><%= parentId.substring(0, 16) %>...</a>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <hr class="divider divider-double" style="margin-left: 0;">
+
+      <% if (order.status === 'pending' || order.status === 'confirmed') { %>
+        <%- include('partials/order', { order }) %>
+      <% } else { %>
+        <!-- Purchase Section -->
+        <div data-testid="purchase-panel">
+          <div class="price-label">ACQUISITION PRICE</div>
+          <div class="price" data-testid="price-sats"><%= formatSats(checkout.priceSats) %></div>
+
+          <form method="post" data-testid="buy-form" data-inscription-target="form">
+            <% if ((config.optional_payments ?? []).length > 0) { %>
+              <div class="optional-payments" data-testid="optional-payments">
+                <div class="optional-payments-label">Additional Options</div>
+                <% config.optional_payments.forEach((payment, index) => { %>
+                  <label class="optional-payment" data-testid="optional-payment">
+                    <input type="checkbox" data-inscription-target="optionalPayment" data-payment='<%= JSON.stringify(payment) %>' data-action="inscription#calculateCost" />
+                    <div class="optional-payment-title"><%= payment.title %></div>
+                    <span class="optional-payment-amount"><%= formatSats(payment.amount) %></span>
+                    <div class="optional-payment-desc"><%= payment.description %></div>
+                  </label>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <div class="fees-section" data-testid="fees" data-inscription-target="fees">
+              <div class="field-row">
+                <div class="field-label">Network Fee:</div>
+                <div class="field-value" data-inscription-target="fee">-</div>
+              </div>
+              <div class="field-row">
+                <div class="field-label">Fee Rate:</div>
+                <div class="field-value" data-inscription-target="feeRate">-</div>
+              </div>
+              <div class="field-row" style="font-weight: 700;">
+                <div class="field-label">Total:</div>
+                <div class="field-value" data-inscription-target="total">-</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+              <button
+                class="btn btn-stamp hide-on-connected"
+                type="button"
+                data-inscription-target="connectButton"
+                data-action="wallet#select"
+                style="width: 100%;"
+              >
+                Connect Wallet
+              </button>
+
+              <button
+                class="btn btn-stamp show-on-connected"
+                type="button"
+                data-inscription-target="prepareButton"
+                data-action="click->inscription#prepare"
+                style="width: 100%;"
+              >
+                <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                  <span data-inscription-target="prepareSpinner" class="button-spinner button-spinner-hidden"></span>
+                  <span data-inscription-target="prepareLabel">ACQUIRE ARTIFACT</span>
+                </span>
+              </button>
+
+              <button
+                class="btn btn-primary hidden"
+                type="button"
+                data-testid="buy-button"
+                data-inscription-target="buyButton"
+                data-action="click->inscription#buy"
+                style="width: 100%;"
+              >
+                <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                  <span data-inscription-target="buySpinner" class="button-spinner button-spinner-hidden"></span>
+                  <span data-inscription-target="buyLabel">Complete Purchase</span>
+                </span>
+              </button>
+            </div>
+          </form>
+
+          <div class="hidden message message-success" data-inscription-target="successPanel" data-testid="buy-success">
+            <div class="message-title" data-inscription-target="successTitle">ACQUISITION COMPLETE</div>
+            <a class="message-link" target="_blank" rel="noopener" data-inscription-target="successLink" href="">View on mempool.space</a>
+          </div>
+
+          <div class="hidden message message-error" data-inscription-target="errorPanel" data-testid="buy-client-error">
+            <div class="message-title" data-inscription-target="errorTitle">ERROR</div>
+            <div class="message-link" data-inscription-target="errorMessage"></div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+</section>

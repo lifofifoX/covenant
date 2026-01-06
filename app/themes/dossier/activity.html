@@ -1,0 +1,79 @@
+<section data-testid="activity-page">
+  <!-- Document Header -->
+  <div class="doc-header" data-testid="header-right">
+    <div class="section-label">REGISTRY // ACTIVITY</div>
+    <div class="doc-header-row">
+      <div>
+        <div class="doc-number">DOC-<%= new Date().getFullYear() %>-LOG // TRANSACTION REGISTRY</div>
+        <div class="doc-title" data-testid="page-title">Activity Log</div>
+        <div class="doc-date">Chronological Record of All Transactions</div>
+      </div>
+      <div class="hide-on-connected">
+        <button class="classification-stamp connect-stamp" data-action="wallet#select">Connect Wallet</button>
+      </div>
+      <div class="show-on-connected">
+        <div style="position: relative;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+          <button class="classification-stamp connected-stamp" data-action="dropdown#toggle">
+            <span data-wallet-target="addressPreview"></span>
+          </button>
+          <div class="dropdown-menu hidden" data-dropdown-target="menu">
+            <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" data-testid="header-nav">
+    <a class="tab" href="/">All Collections</a>
+    <a class="tab active" href="/activity">Activity Log</a>
+    <a class="tab" href="/policy">Policy</a>
+  </nav>
+
+  <!-- Activity Log Entries -->
+  <div class="activity-log" data-testid="orders">
+    <% if ((orders ?? []).length === 0) { %>
+      <div class="empty-state" data-testid="empty-state">
+        <p>NO TRANSACTIONS RECORDED</p>
+      </div>
+    <% } else { %>
+      <% orders.forEach((o, index) => { %>
+        <% const createdDate = o.created_at ? new Date(o.created_at * 1000) : new Date() %>
+        <% const dateStr = createdDate.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }) %>
+        <% const timeStr = createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC' %>
+        <div class="log-entry" data-testid="order-row">
+          <div class="log-timestamp"><%= dateStr %><br><%= timeStr %></div>
+          <div class="log-ref">TXN-<%= String(orders.length - index).padStart(4, '0') %></div>
+          <div class="log-action">
+            <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" data-testid="order-inscription-link"><%= o.inscription_id.substring(0, 12) %>...</a>
+            <% if (o.status === 'confirmed' && o.buyer_address) { %>
+              <span class="log-buyer">&rarr; <%= o.buyer_address.substring(0, 8) %>...</span>
+            <% } %>
+          </div>
+          <div class="log-status">
+            <% if (o.status === 'pending') { %>
+              <span class="stamp stamp-pending" data-testid="order-status">PENDING</span>
+            <% } else if (o.status === 'confirmed') { %>
+              <span class="stamp stamp-confirmed" data-testid="order-status">CONFIRMED</span>
+            <% } else { %>
+              <span class="stamp stamp-sold" data-testid="order-status"><%= o.status.toUpperCase() %></span>
+            <% } %>
+          </div>
+          <div class="log-amount" data-testid="order-price">
+            <% if (o.price_sats) { %>
+              <%= formatSats(o.price_sats) %>
+            <% } else { %>
+              -
+            <% } %>
+          </div>
+          <% if (o.txid) { %>
+            <div class="log-tx">
+              <a href="https://mempool.space/tx/<%= encodeURIComponent(o.txid) %>" target="_blank" rel="noopener" data-testid="order-tx-link">TX</a>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</section>

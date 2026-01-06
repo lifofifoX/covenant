@@ -56,6 +56,8 @@ Each theme MUST differ in at least 3 of these structural dimensions:
 
 **Use archetypes as inspiration, not rules.** The goal is structural differentiation — each theme should pass the blindfold test. Archetypes help you think about layout patterns, but you can blend them or create something entirely new. Just don't duplicate an existing theme's structure.
 
+#### Core Archetypes
+
 | Archetype | Header | Home | Grid | Detail | Example Sites |
 |-----------|--------|------|------|--------|---------------|
 | **Editorial** | Minimal masthead | Hero feature + list | 2-col asymmetric | Stacked, text-rich | Apartamento, Fantastic Man |
@@ -68,15 +70,56 @@ Each theme MUST differ in at least 3 of these structural dimensions:
 | **Swiss** | Minimal wordmark | Mathematical grid | 4-col precise | 2/3 + 1/3 split | Müller-Brockmann |
 | **Zen** | Near-invisible | Centered, spacious | 2-col, huge gaps | Stacked, centered | Japanese ma (空白) |
 
-Check existing themes in `app/themes/` to avoid duplication:
-- `default/` — baseline dark theme
-- `folio/` — Editorial archetype
-- `signal/` — Dashboard archetype
-- `archive/` — Index archetype
-- `void/` — Gallery archetype
-- `concrete/` — Brutalist archetype
-- `cabinet/` — Catalog archetype
-- `zine/` — DIY/Punk archetype
+#### High-End & Luxury Archetypes
+
+| Archetype | Header | Home | Grid | Detail | Inspiration |
+|-----------|--------|------|------|--------|-------------|
+| **Maison** | Centered wordmark, serif | Full-bleed hero + scroll | Portrait cards, generous margins | Split with provenance story | Hermès, Bottega Veneta, Celine |
+| **Auction House** | Classic serif nav | Featured lot spotlight | Lot grid with estimate ranges | Detailed provenance + history | Christie's, Sotheby's, Phillips |
+| **Private Collection** | Personal monogram | Curated selection, no grid | Salon-style hanging | Object study with annotations | Fondation Louis Vuitton, Pinault Collection |
+| **Art Deco** | Geometric logotype | Symmetrical compositions | Decorative borders, gold accents | Framed presentation | Chrysler Building, Claridge's |
+| **Neoclassical** | Serif wordmark, rules | Centered, hierarchical | Symmetrical, columned | Pedestal presentation | Metropolitan Museum, British Museum |
+
+#### Pop Culture & Media Archetypes
+
+| Archetype | Header | Home | Grid | Detail | Inspiration |
+|-----------|--------|------|------|--------|-------------|
+| **Film Credits** | Title card style | Opening sequence scroll | Poster grid | Credits roll layout | Saul Bass, Kyle Cooper title sequences |
+| **Record Label** | Label logo | Featured release hero | Album grid, 12" format | Gatefold layout, liner notes | Factory Records, 4AD, ECM |
+| **VHS/Analog** | Distorted type | Tracking lines, CRT glow | Tape spine grid | Scan lines, timecode | Video rental aesthetic, analog artifacts |
+| **Video Game** | Pixel or UI chrome | Level select / menu | Achievement grid | Stats panel, inventory | Nintendo, PlayStation aesthetic |
+| **Manga Panel** | Bold Japanese type | Dramatic splash | Panel grid, speech bubbles | Full-page spread | Shonen Jump, Tezuka |
+| **Anime Cel** | Clean Japanese typography | Key frame showcase | Character sheet grid | Production art style | Studio Ghibli, Gainax |
+
+#### Art Movement Archetypes
+
+| Archetype | Header | Home | Grid | Detail | Inspiration |
+|-----------|--------|------|------|--------|-------------|
+| **Bauhaus** | Geometric sans | Primary shapes | Mathematical 3x3 | Form follows function | Kandinsky, Klee, Moholy-Nagy |
+| **Constructivist** | Diagonal bold type | Dynamic diagonals | Angled, overlapping | Propaganda poster | Rodchenko, El Lissitzky |
+| **De Stijl** | Mondrian blocks | Primary color grid | Asymmetric balance | Neoplastic composition | Mondrian, Rietveld |
+| **Memphis** | Playful, patterned | Squiggle chaos | Irregular, colorful | Maximalist layers | Sottsass, Ettore, Michele De Lucchi |
+| **Minimalist** | Single word | One object | Vast whitespace | Object + label only | Donald Judd, Dan Flavin |
+| **Pop Art** | Ben-Day dots | Comic enlargement | Repetition grid | Bold outline, flat color | Warhol, Lichtenstein |
+| **Surrealist** | Dream typography | Unexpected juxtaposition | Floating arrangement | Dali-esque presentation | Magritte, Dali, Ernst |
+
+#### Institutional & Scientific Archetypes
+
+| Archetype | Header | Home | Grid | Detail | Inspiration |
+|-----------|--------|------|------|--------|-------------|
+| **Wunderkammer** | Ornate script | Cabinet display | Curio arrangement | Specimen card | Natural history cabinets, curiosity rooms |
+| **Scientific Specimen** | Classification header | Taxonomy index | Species grid | Botanical illustration | Linnaean taxonomy, Darwin's notes |
+| **Museum Label** | Institution wordmark | Object clusters | Study collection | Extended label with provenance | Smithsonian, Natural History Museum |
+| **Academic Press** | University crest | Journal contents | Citation list | Footnoted, referenced | University presses, journals |
+
+#### Nostalgic & Retro Archetypes
+
+| Archetype | Header | Home | Grid | Detail | Inspiration |
+|-----------|--------|------|------|--------|-------------|
+| **Vaporwave** | Glitched text | Marble busts, palm trees | Pink/cyan gradient grid | Nostalgic digital | Macintosh Plus, early internet |
+| **Y2K** | Chrome, bubble text | Futuristic optimism | Translucent cards | Metallic, iridescent | Early 2000s tech aesthetic |
+| **Film Noir** | Art deco crime | High contrast shadows | Venetian blind stripes | Dramatic spotlight | Raymond Chandler, noir cinema |
+| **Space Age** | Orbit typography | Mission control | Capsule grid | Technical readout | NASA, 1960s futurism |
 
 ### Signature Moves
 
@@ -476,6 +519,48 @@ The preview shows the approved design. Your implementation must match:
 - Same layout structure
 - Same component styling
 
+## CRITICAL: How to Match the Proposal
+
+**1. Copy CSS directly from the proposal:**
+- The proposal HTML contains ALL CSS inline in `<style>` tags
+- Extract CSS rules and use them verbatim (only changing CSS variable names)
+- DO NOT rewrite or "improve" the CSS - copy it exactly
+- Search for specific class names: `grep "inscription-preview" tmp/themes/{name}.html`
+
+**2. Match HTML structure exactly:**
+- Use the SAME class names as the proposal (e.g., `two-col` not `detail-two-col`)
+- Use the SAME element nesting and hierarchy
+- Use the SAME element types (div vs span, etc.)
+
+**3. Implement page by page with verification:**
+- For EACH page section in the proposal:
+  a. Read that section from the proposal file
+  b. Copy the HTML structure
+  c. Copy the CSS rules for that section
+  d. Replace placeholder content with EJS variables
+  e. Verify it matches before moving to the next page
+
+**4. Use grep to find all relevant CSS:**
+```bash
+# Find all CSS for a specific component
+grep -A 20 ".two-col" tmp/themes/{name}.html
+grep -A 15 ".inscription-preview" tmp/themes/{name}.html
+grep -A 10 ".field-row" tmp/themes/{name}.html
+```
+
+**5. Check each page against proposal:**
+- Home page layout and components
+- Collection page (table vs cards, columns)
+- Inscription detail (two-col split, preview box, field rows)
+- Activity page (log entries vs table)
+- Policy page structure
+
+**Common mistakes to avoid:**
+- Renaming classes (proposal uses `two-col`, implementation uses `detail-two-col`)
+- Changing layout approach (proposal uses flex, implementation uses grid)
+- Inventing new CSS instead of copying from proposal
+- Skipping components that exist in the proposal
+
 ## Critical Implementation Rules
 
 1. ALL CSS in single file: `app/assets/stylesheets/application.{name}.tailwind.css`
@@ -629,14 +714,94 @@ Return:
 
 10. **Color variables undefined**: Check `@theme` block has all required variables.
 
+11. **Implementation doesn't match proposal**: This is the #1 issue. To fix:
+    - Read the proposal HTML file section by section
+    - Copy CSS rules directly from the proposal's `<style>` tags
+    - Use the exact same class names (don't rename `two-col` to `detail-two-col`)
+    - Use grep to find CSS: `grep -A 20 ".class-name" tmp/themes/{name}.html`
+    - Compare each page visually against the proposal before moving on
+
 ### Inspiration Sources
 
-**Galleries**: Gagosian, White Cube, Pace, David Zwirner
-**Publications**: Inventory Magazine, Apartamento, MacGuffin, Fantastic Man
-**Designers**: Peter Saville, M/M Paris, Experimental Jetset, OK-RM
-**Archives**: MoMA, Criterion Collection, Kadist, Swiss Poster Collection
-**Print**: Emigre, Raygun, The Face, Swiss poster archives
-**Product**: Dieter Rams, Muji, Naoto Fukasawa
-**Art**: Constructivism, Suprematism, Fluxus
-**Digital**: Early Mac UI, Bloomberg terminal, brutalistwebsites.com
-**Fashion**: Comme des Garçons, Maison Margiela, Acne Studios
+#### Galleries & Institutions
+**Blue Chip Galleries**: Gagosian, White Cube, Pace, David Zwirner, Hauser & Wirth, Zwirner
+**Auction Houses**: Christie's, Sotheby's, Phillips, Bonhams, Heritage Auctions
+**Museums**: MoMA, Tate Modern, Centre Pompidou, Guggenheim, Whitney, LACMA
+**Private Foundations**: Fondation Louis Vuitton, Pinault Collection, Broad, Rubell
+**Photography**: Magnum Photos, Aperture, ICP
+
+#### Publications & Editorial
+**Art Magazines**: Artforum, Frieze, Mousse, Flash Art, Art in America
+**Culture/Lifestyle**: Apartamento, Fantastic Man, The Gentlewoman, MacGuffin, Inventory
+**Design**: Eye Magazine, Print, Communication Arts, It's Nice That
+**Independent**: Dazed, i-D, AnOther, SSENSE, 032c
+**Literary**: The Paris Review, Granta, n+1, McSweeney's
+
+#### Graphic Design Studios
+**Legendary**: Peter Saville, M/M Paris, Experimental Jetset, OK-RM
+**Contemporary**: Non-Format, Spin, North, Base Design, Pentagram
+**Type-Focused**: Emigre, House Industries, Commercial Type, Colophon
+**Swiss**: Müller-Brockmann, Weingart, Hofmann, Ruder
+**Japanese**: Kenya Hara, Kashiwa Sato, Nagi Noda, Groovisions
+
+#### Fashion Houses
+**Luxury**: Hermès, Bottega Veneta, Celine (Phoebe Philo era), The Row, Loro Piana
+**Avant-Garde**: Comme des Garçons, Maison Margiela, Rick Owens, Yohji Yamamoto
+**Contemporary**: Acne Studios, Jil Sander, Lemaire, Auralee
+**Streetwear-Luxury**: Sacai, Undercover, Number (N)ine
+
+#### Fine Art Movements
+**Minimalism**: Donald Judd, Dan Flavin, Agnes Martin, Robert Morris, Sol LeWitt
+**Pop Art**: Andy Warhol, Roy Lichtenstein, Claes Oldenburg, James Rosenquist
+**Abstract Expressionism**: Rothko, de Kooning, Pollock, Franz Kline
+**Conceptual**: Lawrence Weiner, Joseph Kosuth, Barbara Kruger, Jenny Holzer
+**Contemporary**: Gerhard Richter, Anselm Kiefer, Kara Walker, Julie Mehretu
+**Photography**: Richard Avedon, Irving Penn, Helmut Newton, Peter Lindbergh
+
+#### Historical Art & Design
+**Movements**: Bauhaus, De Stijl, Constructivism, Suprematism, Futurism, Art Deco
+**Schools**: Vienna Secession, Arts & Crafts, Swiss International Style
+**Artists**: El Lissitzky, Rodchenko, Moholy-Nagy, Cassandre, A.M. Cassandre
+**Typography**: Jan Tschichold, Paul Renner, Adrian Frutiger, Hermann Zapf
+
+#### Film & Cinema
+**Title Designers**: Saul Bass, Kyle Cooper, Pablo Ferro, Maurice Binder
+**Directors (Visual Style)**: Kubrick, Wong Kar-wai, Wes Anderson, David Lynch, Nicolas Winding Refn
+**Cinematographers**: Roger Deakins, Emmanuel Lubezki, Vittorio Storaro
+**Genres**: Film Noir, French New Wave, Italian Neorealism, Giallo
+**Studios**: A24, Criterion Collection, Arrow Video
+
+#### Music & Record Labels
+**Iconic Labels**: Factory Records, 4AD, ECM, Blue Note, Impulse!, Warp
+**Album Art**: Hipgnosis, Vaughan Oliver, Peter Saville, Stefan Sagmeister
+**Visual Identity**: Sub Pop, Rough Trade, Def Jam, XL Recordings
+**Music Videos**: Michel Gondry, Spike Jonze, Chris Cunningham, Hiro Murai
+
+#### Japanese Pop Culture
+**Animation Studios**: Studio Ghibli, Gainax, Madhouse, Sunrise, Trigger
+**Manga Publishers**: Shonen Jump, Kodansha, Shogakukan
+**Artists**: Takashi Murakami, Yoshitomo Nara, Kaws (Japanese influence)
+**Aesthetic Concepts**: Wabi-sabi, Ma (空白), Kawaii, Iki
+
+#### Gaming & Digital
+**Retro Gaming**: Nintendo (NES/SNES era), Sega Genesis, PlayStation 1
+**Modern**: FromSoftware (Dark Souls aesthetic), Remedy (Control), Supergiant
+**UI Inspiration**: Bloomberg terminal, early Mac OS, NeXT, BeOS
+**Web**: brutalistwebsites.com, Hoverstat.es, siteinspire.com
+
+#### Architecture
+**Modernism**: Le Corbusier, Mies van der Rohe, Tadao Ando, Louis Kahn
+**Brutalism**: Barbican, Habitat 67, National Theatre London
+**Contemporary**: Zaha Hadid, Herzog & de Meuron, OMA, SANAA
+**Interiors**: Axel Vervoordt, Vincent Van Duysen, John Pawson
+
+#### Product & Industrial Design
+**Iconic Designers**: Dieter Rams, Naoto Fukasawa, Jasper Morrison
+**Brands**: Muji, Braun, Vitsœ, Bang & Olufsen
+**Contemporary**: Teenage Engineering, Nothing, KINTO
+
+#### Pop Culture References
+**Nostalgia**: VHS rental stores, Polaroid, analog photography, film cameras
+**Retro-Futurism**: Space Age 1960s, Y2K aesthetic, Vaporwave
+**Subcultures**: Punk zines, rave flyers, skateboard graphics, tattoo flash
+**Ephemera**: Airline tickets, stamps, receipts, index cards, library cards

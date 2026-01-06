@@ -1,0 +1,83 @@
+<section data-testid="inscriptions-page">
+  <h2 class="sr-only" data-testid="page-title">Collection</h2>
+
+  <div class="section">
+    <!-- Collection Header Window -->
+    <div class="collection-header-window window">
+      <div class="window-titlebar">
+        <div class="window-title">
+          <div class="window-title-icon"></div>
+          <%= collection.slug %> // Properties
+        </div>
+        <div class="window-controls">
+          <button class="window-btn">_</button>
+          <button class="window-btn">□</button>
+          <button class="window-btn">×</button>
+        </div>
+      </div>
+      <div class="window-content">
+        <div class="collection-header-content">
+          <div class="collection-header-image">
+            <% if (collection.gallery_inscription_id) { %>
+              🖼️
+            <% } else if (collection.parent_inscription_id) { %>
+              💎
+            <% } else { %>
+              ⭐
+            <% } %>
+          </div>
+          <div class="collection-header-info">
+            <h2 class="collection-header-title"><%= collection.title %></h2>
+            <p class="collection-header-desc">
+              <% if (collection.parent_inscription_id || collection.gallery_inscription_id) { %>
+                <% const isGallery = Boolean(collection.gallery_inscription_id) %>
+                <% if (isGallery) { %>
+                  <%= new Intl.NumberFormat('en-US').format(parentInscription.galleryCount) %> inscriptions in this gallery.
+                <% } else { %>
+                  <%= new Intl.NumberFormat('en-US').format(parentInscription.childCount) %> inscriptions from parent.
+                <% } %>
+              <% } %>
+              Preserved forever on the timechain. 永遠に保存。
+            </p>
+            <div class="collection-header-stats">
+              <div class="header-stat">
+                <div class="header-stat-value"><%= collection.itemsCount ?? 0 %></div>
+                <div class="header-stat-label">Available</div>
+              </div>
+              <div class="header-stat">
+                <div class="header-stat-value"><%= formatSats(collection.price_sats).replace(' sats', '') %></div>
+                <div class="header-stat-label">Floor (sats)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inscriptions Grid -->
+    <% if ((collection.itemsCount ?? 0) === 0) { %>
+      <div class="empty-state" data-testid="empty-state">
+        <p data-testid="empty-title">NO INSCRIPTIONS AVAILABLE // なし</p>
+      </div>
+    <% } else { %>
+      <div class="inscription-grid" data-testid="grid">
+        <%- collection.itemsHtml %>
+      </div>
+
+      <!-- Pagination -->
+      <% if ((pagination.totalPages ?? 1) > 1) { %>
+        <div class="pagination" data-testid="pagination">
+          <a href="<%= pagination.prevUrl %>" class="page-btn <%= pagination.hasPrev ? '' : 'disabled' %>" data-action="click->store#paginate" data-testid="prev-page">« Prev</a>
+          <% if ((pagination.pages ?? []).length > 0) { %>
+            <% pagination.pages.forEach((pageLink) => { %>
+              <% if (pageLink.type !== 'gap') { %>
+                <a href="<%= pageLink.url %>" class="page-btn <%= pageLink.isActive ? 'active' : '' %>" data-action="click->store#paginate" data-testid="page-link"><%= pageLink.n %></a>
+              <% } %>
+            <% }) %>
+          <% } %>
+          <a href="<%= pagination.nextUrl %>" class="page-btn <%= pagination.hasNext ? '' : 'disabled' %>" data-action="click->store#paginate" data-testid="next-page">Next »</a>
+        </div>
+      <% } %>
+    <% } %>
+  </div>
+</section>

@@ -1,0 +1,101 @@
+<section data-testid="home-page">
+  <!-- Document Header -->
+  <div class="doc-header" data-testid="header-right">
+    <div class="section-label">REGISTRY // COLLECTIONS</div>
+    <div class="doc-header-row">
+      <div>
+        <div class="doc-number">DOC-<%= new Date().getFullYear() %>-001 // REGISTRY INDEX</div>
+        <div class="doc-title" data-testid="collections-title">Collections Archive</div>
+        <div class="doc-date">Last Updated: <%= new Date().toISOString().split('T')[0] %> // <%= (collections ?? []).length %> Collection<%= (collections ?? []).length !== 1 ? 's' : '' %> Registered</div>
+      </div>
+      <div class="hide-on-connected">
+        <button class="classification-stamp connect-stamp" data-action="wallet#select">Connect Wallet</button>
+      </div>
+      <div class="show-on-connected">
+        <div style="position: relative;" data-controller="dropdown" data-action="mouseup@window->dropdown#hide">
+          <button class="classification-stamp connected-stamp" data-action="dropdown#toggle">
+            <span data-wallet-target="addressPreview"></span>
+          </button>
+          <div class="dropdown-menu hidden" data-dropdown-target="menu">
+            <a class="dropdown-item danger" href="#" data-action="wallet#logout:prevent dropdown#toggle">Disconnect</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Artist Bio Section -->
+  <% if (artist.about) { %>
+    <div class="bio-section" data-testid="about">
+      <div class="bio-content">
+        <% if (CONFIG.artist_avatar_url) { %>
+          <div class="bio-avatar">
+            <img src="<%= CONFIG.artist_avatar_url %>" alt="<%= CONFIG.artist_name %>" />
+          </div>
+        <% } %>
+        <div class="bio-text-content">
+          <h2>SUBJECT PROFILE</h2>
+          <p class="bio-text" data-testid="artist-about"><%= artist.about %></p>
+          <p class="bio-text bio-redacted">Additional information: <span class="redacted">CLASSIFIED LEVEL 4</span> clearance required. Subject maintains <span class="redacted">REDACTED</span> operations since <span class="redacted">DATE EXPUNGED</span><span class="cursor"></span></p>
+          <div class="bio-links" data-testid="artist-social">
+            <% if (artist.socials.websiteUrl) { %>
+              <a href="<%= artist.socials.websiteUrl %>" target="_blank" rel="noopener" data-testid="artist-social-website">Website</a>
+            <% } %>
+            <% if (artist.socials.xUrl) { %>
+              <a href="<%= artist.socials.xUrl %>" target="_blank" rel="noopener" data-testid="artist-social-x">X/Twitter</a>
+            <% } %>
+            <% if (artist.socials.githubUrl) { %>
+              <a href="<%= artist.socials.githubUrl %>" target="_blank" rel="noopener" data-testid="artist-social-github">GitHub</a>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" data-testid="header-nav">
+    <a class="tab active" href="/">All Collections</a>
+    <a class="tab" href="/activity">Activity Log</a>
+    <a class="tab" href="/policy">Policy</a>
+  </nav>
+
+  <!-- Content Area -->
+  <div class="tab-content" data-testid="collections">
+    <% (collections ?? []).forEach((collection, index) => { %>
+      <% const refNum = String(index + 1).padStart(4, '0') %>
+      <a
+        class="index-card"
+        href="/<%= encodeURIComponent(collection.slug) %>"
+        data-testid="collection-card"
+        data-collection-slug="<%= collection.slug %>"
+      >
+        <div class="index-card-ref">REF-<%= CONFIG.artist_name.substring(0,2).toUpperCase() %>-<%= refNum %></div>
+        <div class="index-card-title" data-testid="collection-title">
+          <%= collection.title %>
+          <% if (collection.hasGallery) { %>
+            <span data-testid="collection-gallery-icon" aria-label="Gallery">&#128444;</span>
+          <% } else if (collection.hasParent) { %>
+            <span data-testid="collection-parent-icon" aria-label="Parent">&#129516;</span>
+          <% } %>
+        </div>
+        <div class="index-card-meta">
+          <%= collection.availableCount %> Available // Floor: <span data-testid="collection-price"><%= formatSats(collection.priceSats) %></span>
+        </div>
+        <div style="margin-top: 10px;">
+          <% if (collection.availableCount > 0) { %>
+            <span class="stamp stamp-available" data-testid="collection-available">COLLECTION // AVAILABLE</span>
+          <% } else { %>
+            <span class="stamp stamp-sold">COLLECTION // ARCHIVED</span>
+          <% } %>
+        </div>
+      </a>
+    <% }) %>
+
+    <% if ((collections ?? []).length === 0) { %>
+      <div class="empty-state">
+        <p>NO COLLECTIONS REGISTERED</p>
+      </div>
+    <% } %>
+  </div>
+</section>
