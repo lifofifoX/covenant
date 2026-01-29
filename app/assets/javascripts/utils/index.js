@@ -30,7 +30,7 @@ export async function requestSignPsbt({ psbt, signInputs }) {
       })
     })
 
-    const response = await window.unisat.signPsbt(base64.encode(psbt), { autoFinalized: false, toSignInputs: toSignInputs })
+    const response = await window.unisat.signPsbt(hex.encode(psbt), { autoFinalized: false, toSignInputs: toSignInputs })
     return { status: "success", result: { psbt: base64.encode(hex.decode(response)) } }
   } else {
     return request('signPsbt', { psbt: base64.encode(psbt), broadcast: false, signInputs: signInputs })

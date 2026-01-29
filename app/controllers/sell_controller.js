@@ -1,4 +1,6 @@
 import { Collection } from '../models/collection.js'
+import { parseSignedPsbt } from '../utils/psbt.js'
+import { readJsonWithLimit } from '../utils/request_body.js'
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -11,10 +13,16 @@ export async function executeSellController(c) {
   const slug = c.req.param('slug')
   const collection = Collection.lookup(slug)
 
-  const body = await c.req.json().catch(() => ({}))
+  if (collection.isLaunchpad) {
+    return json({ error: 'Launchpad mints must use /launchpad/:slug/mint' }, 400)
+  }
+
+  const body = await readJsonWithLimit(c.req.raw)
 
   const signedPsbt = body.signedPsbt
   if (!signedPsbt) return json({ error: 'Missing signedPsbt' }, 400)
+
+  parseSignedPsbt(signedPsbt)
 
   const inscription = await collection.loadInscription({ db: c.env.DB, inscriptionId: body.inscriptionId })
   if (!inscription) return json({ error: 'Inscription is not available' }, 404)

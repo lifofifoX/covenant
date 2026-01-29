@@ -25,7 +25,7 @@
             <% const createdHuman = o.created_at ? new Date(o.created_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '' %>
             <tr data-testid="order-row">
               <!-- Thumbnail -->
-              <td>
+              <td data-label="Item">
                 <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" data-testid="order-thumb-link">
                   <div style="width: 50px; height: 50px; overflow: hidden; border: 2px solid var(--color-primary); position: relative; <%= (o.status === 'pending' || o.status === 'confirmed') ? 'opacity: 0.6; filter: grayscale(100%);' : '' %>" data-controller="image" data-testid="order-thumb">
                     <div style="position: absolute; inset: 0; background: var(--color-bg);" data-image-target="skeleton"></div>
@@ -48,7 +48,7 @@
               </td>
 
               <!-- Inscription info -->
-              <td style="min-width: 0;">
+              <td data-label="Inscription" style="min-width: 0;">
                 <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" style="color: var(--color-primary); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" data-testid="order-inscription-link">
                   <%= o.inscription_id.substring(0, 20) %>...
                 </a>
@@ -59,7 +59,7 @@
               </td>
 
               <!-- Price -->
-              <td data-testid="order-price">
+              <td data-label="Price" data-testid="order-price">
                 <% if (o.price_sats) { %>
                   <span style="color: var(--color-accent); font-weight: 700;"><%= formatSats(o.price_sats) %></span>
                 <% } else { %>
@@ -68,7 +68,7 @@
               </td>
 
               <!-- Status -->
-              <td>
+              <td data-label="Status">
                 <% if (o.status === 'pending') { %>
                   <span class="status-badge status-pending" data-testid="order-status">
                     <span class="button-spinner" style="width: 10px; height: 10px; border-width: 1px;"></span>
@@ -84,7 +84,7 @@
               </td>
 
               <!-- Date -->
-              <td style="color: var(--color-muted);" data-testid="order-created">
+              <td data-label="Date" style="color: var(--color-muted);" data-testid="order-created">
                 <%= createdHuman %>
               </td>
             </tr>

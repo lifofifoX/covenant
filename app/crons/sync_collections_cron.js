@@ -1,5 +1,4 @@
 import { OrdinalsAPI } from '../models/ordinals_api.js'
-import { POLICY } from '../config.js'
 import { Collection } from '../models/collection.js'
 import { ensureInscriptionMetadata, refreshInscriptionMetadata, setCollectionAvailableIds } from '../models/db/inscriptions.js'
 import { getSellerTaprootAddress } from '../utils/sell_address.js'
@@ -49,14 +48,15 @@ export async function syncCollections({ env }) {
   const taprootAddress = await getSellerTaprootAddress(env)
   const ownedIds = await OrdinalsAPI.findInscriptionsByAddress(taprootAddress)
 
-  const collectionSlugs = uniq(POLICY.selling.map((c) => c.slug))
+  const collectionPolicies = Collection.listPolicies()
+  const collectionSlugs = uniq(collectionPolicies.map((c) => c.slug))
 
-  const metadataInscriptionIds = uniq(POLICY.selling.map((c) => new Collection({ policy: c }).metadataInscriptionId))
+  const metadataInscriptionIds = uniq(collectionPolicies.map((c) => new Collection({ policy: c }).metadataInscriptionId))
   await refreshInscriptionMetadata({ db, inscriptionIds: metadataInscriptionIds })
 
   const metadataById = await ensureInscriptionMetadata({ db, inscriptionIds: uniq([...metadataInscriptionIds, ...ownedIds]) })
 
-  for (const collection of POLICY.selling) {
+  for (const collection of collectionPolicies) {
     const availableIds = computeAvailableIds({ ownedIds, metadataById, collection })
     await setCollectionAvailableIds({ db, collectionSlug: collection.slug, availableIds, syncRunId, metadataById })
   }

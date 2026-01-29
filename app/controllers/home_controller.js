@@ -1,4 +1,4 @@
-import { CONFIG, POLICY } from '../config.js'
+import { CONFIG } from '../config.js'
 import { renderHome } from '../helpers/home.js'
 import { htmlResponse } from './html_response.js'
 import { Collection } from '../models/collection.js'
@@ -8,7 +8,7 @@ export async function homeController(c) {
 
   const collections = []
 
-  for (const collectionPolicy of POLICY.selling) {
+  for (const collectionPolicy of Collection.listPolicies()) {
     const collection = Collection.lookup(collectionPolicy.slug)
     const thumbnail = await collection.metadataInscription({ db })
     const availableCount = await collection.availableCount({ db })

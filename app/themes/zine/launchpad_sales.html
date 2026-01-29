@@ -1,0 +1,92 @@
+<turbo-frame id="launchpad-sales" target="_top">
+  <% const salesOrders = recentSales ?? [] %>
+  <section data-testid="activity-page" style="margin-top: 3rem;">
+    <div class="section-header" style="margin-bottom: 32px;">
+      <h1 class="section-title" data-testid="page-title">Sales Record</h1>
+    </div>
+
+    <% if (salesOrders.length === 0) { %>
+      <div class="empty-state" data-testid="empty-state">
+        <div>No sales recorded yet.</div>
+      </div>
+    <% } else { %>
+      <div class="activity-table-wrapper" data-testid="orders">
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Inscription</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% salesOrders.forEach((o) => { %>
+              <% const createdHuman = o.created_at ? new Date(o.created_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '' %>
+              <tr data-testid="order-row">
+                <td data-label="Item">
+                  <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" data-testid="order-thumb-link">
+                    <div style="width: 50px; height: 50px; overflow: hidden; border: 2px solid var(--color-primary); position: relative; <%= (o.status === 'pending' || o.status === 'confirmed') ? 'opacity: 0.6; filter: grayscale(100%);' : '' %>" data-controller="image" data-testid="order-thumb">
+                      <div style="position: absolute; inset: 0; background: var(--color-bg);" data-image-target="skeleton"></div>
+                      <% if (o.status === 'pending') { %>
+                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.1);">
+                          <span class="button-spinner" style="width: 14px; height: 14px; border-width: 1.5px; color: var(--color-warning);"></span>
+                        </div>
+                      <% } %>
+                      <iframe
+                        src="https://ordinals.com/preview/<%= encodeURIComponent(o.inscription_id) %>"
+                        style="width: 100%; height: 100%; border: none; pointer-events: none;"
+                        loading="lazy"
+                        class="opacity-0 transition-opacity duration-300"
+                        data-image-target="media"
+                        data-action="load->image#loaded error->image#error"
+                        data-testid="order-thumb-media"
+                      ></iframe>
+                    </div>
+                  </a>
+                </td>
+
+                <td data-label="Inscription" style="min-width: 0;">
+                  <a href="/<%= encodeURIComponent(o.collection_slug) %>/<%= encodeURIComponent(o.inscription_id) %>" style="color: var(--color-primary); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" data-testid="order-inscription-link">
+                    <%= o.inscription_id.substring(0, 20) %>...
+                  </a>
+                  <% if (o.txid) { %>
+                    <a href="https://mempool.space/tx/<%= encodeURIComponent(o.txid) %>" target="_blank" rel="noopener" style="font-size: 0.7rem; color: var(--color-accent); margin-top: 4px; display: block;" data-testid="order-tx-link">View tx</a>
+                  <% } %>
+                </td>
+
+                <td data-label="Price" data-testid="order-price">
+                  <% if (o.price_sats) { %>
+                    <span style="color: var(--color-accent); font-weight: 700;"><%= formatSats(o.price_sats) %></span>
+                  <% } else { %>
+                    -
+                  <% } %>
+                </td>
+
+                <td data-label="Status">
+                  <% if (o.status === 'pending') { %>
+                    <span class="status-badge status-pending" data-testid="order-status">
+                      <span class="button-spinner" style="width: 10px; height: 10px; border-width: 1px;"></span>
+                      Pending
+                    </span>
+                  <% } else if (o.status === 'confirmed') { %>
+                    <span class="status-badge status-confirmed" data-testid="order-status">Sold</span>
+                  <% } else if (o.status === 'failed') { %>
+                    <span class="status-badge status-failed" data-testid="order-status">Failed</span>
+                  <% } else { %>
+                    <span class="status-badge status-available" data-testid="order-status"><%= o.status %></span>
+                  <% } %>
+                </td>
+
+                <td data-label="Date" style="color: var(--color-muted);" data-testid="order-created">
+                  <%= createdHuman %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+</turbo-frame>

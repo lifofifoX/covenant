@@ -1,0 +1,254 @@
+<section
+  data-testid="launchpad-page"
+  <% if (!supply.isSoldOut && supply.hasMintable) { %>
+    data-controller="mint"
+    data-action="wallet:connected@window->mint#onWalletConnected wallet:disconnected@window->mint#onWalletDisconnected"
+    data-mint-collection-value="<%= collection.slug %>"
+    data-mint-price-value="<%= collection.price_sats %>"
+    data-mint-payment-address-value="<%= collection.payment_address %>"
+    data-mint-lowest-inscription-utxo-size-value="<%= collection.lowest_inscription_utxo_size %>"
+    data-mint-seller-address-value="<%= launchpad.seller_address %>"
+  <% } %>
+>
+  <% const isGallery = Boolean(collection.gallery_inscription_id) %>
+  <% const bannerId = collection.gallery_inscription_id ?? collection.parent_inscription_id ?? (collection.inscription_ids ?? [])[0] %>
+  <% const totalWorks = parentInscription ? (isGallery ? parentInscription.galleryCount : parentInscription.childCount) : supply.total %>
+  <% const mintedCount = Math.max(0, totalWorks - supply.available) %>
+  <% const mintedPercent = totalWorks > 0 ? Math.round((mintedCount / totalWorks) * 100) : 0 %>
+
+  <div class="collection-header" data-testid="launchpad-header">
+    <h1 class="collection-title"><%= collection.title %></h1>
+    <p style="opacity: 0.8; margin-bottom: 1rem;">
+      <% if (isGallery) { %>
+        Gallery collection with on-chain provenance.
+      <% } else if (collection.parent_inscription_id) { %>
+        Parent-child collection with on-chain provenance.
+        <% if (parentInscription && parentInscription.isSealed) { %>
+          This collection is sealed 🔥
+        <% } %>
+      <% } else { %>
+        Launchpad collection.
+      <% } %>
+    </p>
+
+    <% if (collection.gallery_inscription_id || collection.parent_inscription_id) { %>
+      <div style="margin-top: 16px;">
+        <a
+          href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+          target="_blank"
+          rel="noopener"
+          style="font-size: 0.75rem; color: var(--color-warning-bg);"
+          data-testid="parent-ordinals-number-link"
+        >View on ordinals.com ◉</a>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="detail-layout">
+    <div class="detail-media">
+      <div class="media-frame" data-label="COLLECTION" data-testid="mint-thumb" data-controller="image">
+        <div class="media-image">
+          <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #d0d0d0, #e8e8e8, #d0d0d0);" data-image-target="skeleton"></div>
+          <img
+            src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>"
+            alt=""
+            loading="eager"
+            decoding="async"
+            style="image-rendering: pixelated"
+            class="opacity-0 transition-opacity duration-300"
+            data-image-target="img"
+            data-action="load->image#loaded error->image#error"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-info">
+      <turbo-frame
+        id="launchpad-progress"
+        src="/launchpad/<%= encodeURIComponent(collection.slug) %>/progress"
+        loading="eager"
+        refresh="morph"
+        data-controller="frame-refresh"
+        data-frame-refresh-interval-value="<%= launchpad.refresh_ms %>"
+      ></turbo-frame>
+
+      <div class="purchase-section" data-testid="purchase-panel">
+        <div class="price-row">
+          <span class="price-label">Price</span>
+          <span class="price-value" data-testid="price-sats"><%= formatSats(collection.price_sats) %></span>
+        </div>
+
+        <% if (supply.isSoldOut) { %>
+          <button class="btn btn-accent btn-block" type="button" disabled style="opacity: 0.6; margin-top: 1rem;">
+            Sold Out
+          </button>
+        <% } else if (!supply.hasMintable) { %>
+          <button class="btn btn-accent btn-block" type="button" disabled style="opacity: 0.6; margin-top: 1rem;">
+            Sold Out
+          </button>
+        <% } else { %>
+          <form method="post" data-testid="mint-form" data-mint-target="form">
+            <% if ((collection.optional_payments ?? []).length > 0) { %>
+              <div class="optional-payments" data-testid="optional-payments">
+                <div class="optional-payments-label">Additional Options</div>
+                <% collection.optional_payments.forEach((payment) => { %>
+                  <label class="optional-payment" data-testid="optional-payment">
+                    <input type="checkbox" data-mint-target="optionalPayment" data-payment='<%= JSON.stringify(payment) %>' data-action="mint#calculateCost" />
+                    <div class="optional-payment-title"><%= payment.title %></div>
+                    <div class="optional-payment-amount"><%= formatSats(payment.amount) %></div>
+                    <div class="optional-payment-desc"><%= payment.description %></div>
+                  </label>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <div class="fees-section" data-testid="fees" data-mint-target="fees">
+              <div class="fee-row">
+                <span>Network Fee</span>
+                <span data-mint-target="fee" style="font-family: var(--font-mono);">-</span>
+              </div>
+              <div class="fee-row">
+                <span>Fee Rate</span>
+                <span data-mint-target="feeRate" style="font-family: var(--font-mono);">-</span>
+              </div>
+              <div class="fee-total">
+                <span>Total</span>
+                <span class="value" data-mint-target="total" style="font-family: var(--font-mono);">-</span>
+              </div>
+            </div>
+
+            <% if (launchpad.turnstile_site_key) { %>
+              <div class="turnstile-container" style="margin-top: 1rem; display: flex; justify-content: center;">
+                <div
+                  class="cf-turnstile"
+                  data-mint-target="turnstile"
+                  data-sitekey="<%= launchpad.turnstile_site_key %>"
+                  data-callback="launchpadTurnstileSuccess"
+                  data-expired-callback="launchpadTurnstileExpired"
+                  data-error-callback="launchpadTurnstileError"
+                ></div>
+              </div>
+            <% } %>
+
+            <button
+              class="btn btn-primary btn-block hide-on-connected"
+              type="button"
+              data-mint-target="connectButton"
+              disabled
+              style="opacity: 0.6; margin-top: 1rem;"
+            >
+              Connect Wallet to Mint
+            </button>
+
+            <button
+              class="btn btn-secondary btn-block show-on-connected"
+              type="button"
+              data-mint-target="prepareButton"
+              data-action="click->mint#prepare"
+              style="margin-top: 1rem;"
+            >
+              <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                <span data-mint-target="prepareSpinner" class="button-spinner button-spinner-hidden"></span>
+                <span data-mint-target="prepareLabel">Prepare Mint</span>
+              </span>
+            </button>
+
+            <button
+              class="btn btn-accent btn-block hidden"
+              type="button"
+              data-testid="mint-button"
+              data-mint-target="mintButton"
+              data-action="click->mint#mint"
+              style="margin-top: 1rem;"
+            >
+              <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                <span data-mint-target="mintSpinner" class="button-spinner button-spinner-hidden"></span>
+                <span data-mint-target="mintLabel">Mint</span>
+              </span>
+            </button>
+          </form>
+
+          <div class="hidden message message-success" data-mint-target="successPanel" data-testid="mint-success">
+            <div class="message-title" data-mint-target="successTitle">Mint Successful</div>
+            <a class="message-link" target="_blank" rel="noopener" data-mint-target="successLink" href="">View on mempool.space</a>
+          </div>
+
+          <div class="hidden message message-error" data-mint-target="errorPanel" data-testid="mint-client-error">
+            <div class="message-title" data-mint-target="errorTitle">Error</div>
+            <div class="message-link" data-mint-target="errorMessage"></div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <turbo-frame
+    id="launchpad-sales"
+    src="/launchpad/<%= encodeURIComponent(collection.slug) %>/sales"
+    loading="lazy"
+    refresh="morph"
+    target="_top"
+    data-controller="frame-refresh"
+    data-frame-refresh-interval-value="<%= launchpad.refresh_ms %>"
+  ></turbo-frame>
+</section>
+
+<% if (launchpad.turnstile_site_key) { %>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<% } %>
+
+<style>
+.sale-row {
+  display: grid;
+  grid-template-columns: 50px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-primary);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.sale-row:hover {
+  transform: translateX(2px);
+  border-color: var(--color-accent);
+}
+
+.sale-thumb {
+  width: 50px;
+  height: 50px;
+  border: 2px solid var(--color-primary);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.sale-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.sale-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sale-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.sale-meta {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.sale-price {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-accent);
+}
+</style>

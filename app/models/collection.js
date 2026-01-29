@@ -2,22 +2,36 @@ import { CONFIG, POLICY } from '../config.js'
 import { Inscription } from './inscription.js'
 import {
   countCollectionAvailable,
+  countCollectionTotal,
   ensureInscriptionMetadata,
   getAvailableInscriptionMetadata,
   getInscriptionMetadata,
   listCollectionAvailablePage
 } from './db/inscriptions.js'
+import { countSoldByCollection } from './db/orders.js'
 
 export class Collection {
-  static lookup(slug) {
-    const policy = POLICY.selling.find((collectionPolicy) => collectionPolicy.slug === slug)
-    if (!policy) throw new Error(`Missing collection policy for slug: ${slug}`)
+  #isLaunchpad
 
-    return new Collection({ policy })
+  static lookup(slug) {
+    const sellingPolicy = POLICY.selling.find((collectionPolicy) => collectionPolicy.slug === slug)
+    if (sellingPolicy) return new Collection({ policy: sellingPolicy, isLaunchpad: false })
+
+    const launchpadPolicy = (POLICY.launchpad?.collections ?? []).find((collectionPolicy) => collectionPolicy.slug === slug)
+    if (launchpadPolicy) return new Collection({ policy: launchpadPolicy, isLaunchpad: true })
+
+    throw new Error(`Missing collection policy for slug: ${slug}`)
   }
 
-  constructor({ policy }) {
+  static listPolicies() {
+    const selling = Array.isArray(POLICY.selling) ? POLICY.selling : []
+    const launchpad = Array.isArray(POLICY.launchpad?.collections) ? POLICY.launchpad.collections : []
+    return [...selling, ...launchpad]
+  }
+
+  constructor({ policy, isLaunchpad = false }) {
     this.policy = policy
+    this.#isLaunchpad = isLaunchpad
   }
 
   get slug() {
@@ -30,6 +44,18 @@ export class Collection {
 
   optionalPayments() {
     return Array.isArray(this.policy.optional_payments) ? this.policy.optional_payments : []
+  }
+
+  get isLaunchpad() {
+    return this.#isLaunchpad
+  }
+
+  async totalSupply({ db }) {
+    return await countCollectionTotal({ db, collectionSlug: this.slug })
+  }
+
+  async soldCount({ db }) {
+    return await countSoldByCollection({ db, collectionSlug: this.slug })
   }
 
   get metadataInscriptionId() {
@@ -81,4 +107,5 @@ export class Collection {
 
     return new Inscription({ metadata })
   }
+
 }

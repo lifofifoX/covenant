@@ -99,3 +99,35 @@ export async function setOrderStatus({ db, id, status, txid }) {
   )
   return await getOrderById({ db, id })
 }
+
+export async function countSoldByCollection({ db, collectionSlug }) {
+  const result = await withD1Retry(() =>
+    db.prepare('SELECT COUNT(*) as count FROM orders WHERE collection_slug = ?1 AND status = ?2')
+      .bind(collectionSlug, 'confirmed')
+      .first()
+  )
+  return result?.count ?? 0
+}
+
+export async function countPendingByCollection({ db, collectionSlug }) {
+  const result = await withD1Retry(() =>
+    db.prepare('SELECT COUNT(*) as count FROM orders WHERE collection_slug = ?1 AND status = ?2')
+      .bind(collectionSlug, 'pending')
+      .first()
+  )
+  return result?.count ?? 0
+}
+
+export async function listOrdersByCollection({ db, collectionSlug, limit = 10 }) {
+  const result = await withD1Retry(() =>
+    db.prepare(
+      `SELECT * FROM orders
+       WHERE collection_slug = ?1 AND status IN ('pending', 'confirmed')
+       ORDER BY created_at DESC
+       LIMIT ?2`
+    )
+      .bind(collectionSlug, limit)
+      .all()
+  )
+  return result.results ?? []
+}

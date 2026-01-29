@@ -7,6 +7,7 @@ import { CONFIG } from '../../config.js'
 import { Collection } from '../../models/collection.js'
 import { createOrder, getActiveOrderForInscription } from '../../models/db/orders.js'
 import { fetchJSON } from '../../utils/fetch_json.js'
+import { safeErrorMessage } from '../../utils/logging.js'
 import { StoreWallet } from '../../models/store_wallet.js'
 import { Mempool } from '../../models/mempool.js'
 
@@ -50,7 +51,7 @@ export class SigningAgentWorker {
       const result = await this.#execute(await request.json())
       return json(result.data, result.status)
     } catch (error) {
-      console.error(error?.message ? String(error.message) : String(error))
+      console.error(safeErrorMessage(error))
       if (error instanceof HttpError) {
         return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status)
       }
@@ -65,6 +66,7 @@ export class SigningAgentWorker {
     const existingOrder = await this.#findExistingActiveOrder(inscription.id)
     if (existingOrder) throw new HttpError(409, 'Inscription is already being sold', 'already_selling')
 
+    this.#validateExpectedBuyerAddress(tx, body.expectedBuyerOrdinalAddress)
     await this.#validateEligibleUnsignedTransaction(tx, collection, inscription)
     await this.#validateEligibleInscription(inscription)
 
@@ -74,24 +76,19 @@ export class SigningAgentWorker {
 
     await this.#validateMempoolAcceptance(tx)
 
-    const result = await this.state.blockConcurrencyWhile(async () => {
-      const existingOrder = await this.#findExistingActiveOrder(inscription.id)
-      if (existingOrder) throw new HttpError(409, 'Inscription is already being sold', 'already_selling')
-
-      const order = await createOrder({
-        db: this.env.DB,
-        collectionSlug: collection.slug,
-        inscriptionId: inscription.id,
-        buyerAddress: this.#findBuyerAddress(tx),
-        status: 'pending',
-        txid: tx.id,
-        signedTx: tx.hex,
-        extraDetails: JSON.stringify({ optional_payments: this.#findOptionalPayments(tx, collection) }),
-        priceSats: Number(collection.policy.price_sats)
-      })
-
-      return { order, created: true }
+    const order = await createOrder({
+      db: this.env.DB,
+      collectionSlug: collection.slug,
+      inscriptionId: inscription.id,
+      buyerAddress: this.#findBuyerAddress(tx),
+      status: 'pending',
+      txid: tx.id,
+      signedTx: tx.hex,
+      extraDetails: JSON.stringify({ optional_payments: this.#findOptionalPayments(tx, collection) }),
+      priceSats: Number(collection.policy.price_sats)
     })
+
+    const result = { order, created: true }
 
     const broadcast = await Mempool.broadcastTx(tx.hex)
     if (broadcast !== true) return { status: 200, data: { ...result, broadcastError: String(broadcast) } }
@@ -160,6 +157,16 @@ export class SigningAgentWorker {
 
     const paymentAddress = btc.Address().encode(btc.OutScript.decode(paymentOutput.script))
     if (paymentAddress !== collection.policy.payment_address) throw new HttpError(400, 'Transaction is not eligible for sale')
+  }
+
+  #validateExpectedBuyerAddress(tx, expectedBuyerOrdinalAddress) {
+    if (!expectedBuyerOrdinalAddress) return
+
+    const buyerAddress = this.#findBuyerAddress(tx)
+
+    if (buyerAddress !== expectedBuyerOrdinalAddress) {
+      throw new HttpError(400, 'Buyer address mismatch', 'buyer_mismatch')
+    }
   }
 
   async #validateMempoolAcceptance(tx) {

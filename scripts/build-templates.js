@@ -16,6 +16,7 @@ const destructuredLocals = [
   'storefront',
   'collection',
   'collections',
+  'launchpad',
   'artist',
   'pagination',
   'item',
@@ -28,6 +29,9 @@ const destructuredLocals = [
   'walletAddress',
   'orders',
   'order',
+  'supply',
+  'recentSales',
+  'sale',
 ]
 
 async function main() {

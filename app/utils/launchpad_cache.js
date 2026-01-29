@@ -1,0 +1,1 @@
+export const LAUNCHPAD_CACHE_TTL_SECONDS = 10

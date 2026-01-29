@@ -1,3 +1,13 @@
+launchpad:
+  seller_address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
+  collections:
+    - slug: spellbound
+      title: SPELLBOUND
+      parent_inscription_id: 451accbce30177c23a8cd42ab85131312a449359ada3c054aa147b054136fa3bi0
+      price_sats: 1111
+      lowest_inscription_utxo_size: 330
+      payment_address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
+
 selling:
   - slug: random
     title: Random Wizards
@@ -6,20 +16,6 @@ selling:
     inscription_ids:
       - 508411e486223bbd9e0e1b47c8f15ba4751ba02c37facaafb1de655627f454cci0
       - 0170e1cdd8993da19d791fd1378841a6e981e7754108a069cc943b0e41a36958i0
-  - slug: spellbound
-    title: SPELLBOUND
-    parent_inscription_id: 451accbce30177c23a8cd42ab85131312a449359ada3c054aa147b054136fa3bi0
-    price_sats: 1111
-    payment_address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
-    optional_payments:
-      - title: Ordinals Open Institute
-        description: Support open-source development of the Ordinals protocol
-        amount: 2222
-        address: bc1qguzk63exy7h5uygg8m2tcenca094a8t464jfyvrmr0s6wkt74wls3zr5m3
-      - title: Happy meal for lifo's kids
-        description: We need to keep the kids happy
-        amount: 2222
-        address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
   - slug: nakamoto-archives
     title: NAKAMOTO ARCHIVES
     gallery_inscription_id: 83683a0a2e91beb6d37953df5a768028b987d5006fab1237931f6e30b344aebci0

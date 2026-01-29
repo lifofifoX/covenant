@@ -130,6 +130,15 @@ export async function countCollectionAvailable({ db, collectionSlug }) {
   return Number(row.count)
 }
 
+export async function countCollectionTotal({ db, collectionSlug }) {
+  const result = await withD1Retry(() =>
+    db.prepare('SELECT COUNT(*) as count FROM collection_inscriptions WHERE collection_slug = ?1')
+      .bind(collectionSlug)
+      .first()
+  )
+  return result?.count ?? 0
+}
+
 export async function listCollectionAvailablePage({ db, collectionSlug, limit, offset }) {
   const result = await withD1Retry(() =>
     db
@@ -157,4 +166,17 @@ export async function getAvailableInscriptionMetadata({ db, collectionSlug, insc
   return JSON.parse(row.metadata_json)
 }
 
+export async function getAvailableInscriptionIds({ db, collectionSlug }) {
+  return withD1Retry(async () => {
+    const result = await db.prepare(`
+      SELECT ci.inscription_id
+      FROM collection_inscriptions ci
+      LEFT JOIN orders o ON ci.inscription_id = o.inscription_id
+        AND o.status IN ('pending', 'confirmed')
+      WHERE ci.collection_slug = ?
+        AND o.id IS NULL
+    `).bind(collectionSlug).all()
 
+    return result.results.map(row => row.inscription_id)
+  })
+}

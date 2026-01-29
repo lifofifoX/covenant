@@ -1,0 +1,27 @@
+<div class="sale-row" data-testid="sale-row">
+  <a href="/<%= encodeURIComponent(sale.collection_slug) %>/<%= encodeURIComponent(sale.inscription_id) %>" class="sale-thumb-link" data-testid="sale-thumb-link">
+    <div class="sale-thumb" data-controller="image" data-testid="sale-thumb">
+      <div style="position: absolute; inset: 0; background: var(--color-bg);" data-image-target="skeleton"></div>
+      <iframe
+        src="https://ordinals.com/preview/<%= encodeURIComponent(sale.inscription_id) %>"
+        style="width: 100%; height: 100%; border: none; pointer-events: none;"
+        loading="lazy"
+        class="opacity-0 transition-opacity duration-300"
+        data-image-target="media"
+        data-action="load->image#loaded error->image#error"
+      ></iframe>
+    </div>
+  </a>
+  <div class="sale-info">
+    <div class="sale-id" data-testid="sale-inscription">
+      <%= sale.inscription_id.substring(0, 12) %>...
+    </div>
+    <div class="sale-price" data-testid="sale-price">
+      <%= formatSats(sale.price_sats) %>
+    </div>
+  </div>
+  <div class="sale-date" data-testid="sale-date">
+    <% const saleDate = sale.created_at ? new Date(sale.created_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '' %>
+    <%= saleDate %>
+  </div>
+</div>

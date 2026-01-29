@@ -1018,6 +1018,35 @@ body::before {
   background: rgba(255, 23, 68, 0.05);
 }
 
+@media (max-width: 720px) {
+  .theme-zine .activity-table-wrapper {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .theme-zine .activity-table {
+    font-size: 0.75rem;
+  }
+
+  .theme-zine .activity-table th,
+  .theme-zine .activity-table td {
+    padding: 0.5rem;
+  }
+
+  .theme-zine .activity-table th:nth-child(5),
+  .theme-zine .activity-table td:nth-child(5) {
+    display: none;
+  }
+
+  .theme-zine .activity-table td:nth-child(2) a {
+    max-width: 140px;
+  }
+
+  .theme-zine .status-badge {
+    font-size: 0.6rem;
+  }
+}
+
 /* STATUS BADGES */
 .theme-zine .status-badge {
   display: inline-flex;

@@ -1,25 +1,50 @@
 import { Controller } from '@hotwired/stimulus'
 import * as btc from "@scure/btc-signer"
-import { base64 } from "@scure/base"
 import { RpcErrorCode } from "sats-connect"
 
-import { fetchJSON, formatSats, requestSignPsbt } from '../utils/index.js'
+import { formatSats, requestSignPsbt } from '../utils/index.js'
 import { Mempool } from '../../../models/mempool.js'
 
 const BASE_TX_SIZE = 10.5
 const PADDING = 546n
+const USER_REJECTED_SIGN_REQUEST_MESSAGE = "User rejected the request."
 
 export default class extends Controller {
-  static targets = ['form', 'connectButton', 'prepareButton', 'prepareSpinner', 'prepareLabel', 'buyButton', 'buySpinner', 'buyLabel', 'optionalPayment', 'fees', 'feeRate', 'fee', 'total', 'successPanel', 'successTitle', 'successLink', 'errorPanel', 'errorTitle', 'errorMessage']
-  static values = { price: Number, paymentAddress: String, inscriptionMetadata: Object }
+  static targets = [
+    'form',
+    'connectButton',
+    'prepareButton',
+    'prepareSpinner',
+    'prepareLabel',
+    'mintButton',
+    'mintSpinner',
+    'mintLabel',
+    'turnstile',
+    'optionalPayment',
+    'fees',
+    'feeRate',
+    'fee',
+    'total',
+    'successPanel',
+    'successTitle',
+    'successLink',
+    'errorPanel',
+    'errorTitle',
+    'errorMessage'
+  ]
+  static values = { collection: String, price: Number, paymentAddress: String, lowestInscriptionUtxoSize: Number, sellerAddress: String }
 
   #utxos = []
   #mempoolFees = []
+  #inscriptionMetadata = null
   #prepared = false
+  #turnstileToken = null
 
   connect() {
     this.walletConnectedRun = false
     this.txid = null
+
+    if (this.hasTurnstileTarget) this.#attachTurnstileCallbacks()
 
     if (Wallet.connected && Wallet.provider === 'unisat') {
       const checkUnisat = setInterval(() => {
@@ -44,9 +69,11 @@ export default class extends Controller {
     window.location.reload()
   }
 
-  async prepare() {
-    if (!this.hasFormTarget) return
+  disconnect() {
+    this.#detachTurnstileCallbacks()
+  }
 
+  async prepare() {
     this.#disableForm()
     this.#hideError()
     this.#setPreparingState()
@@ -54,11 +81,10 @@ export default class extends Controller {
     try {
       await Promise.all([
         this.#loadUTXOs(),
-        this.#loadMempoolFees(),
+        this.#loadMempoolFees()
       ])
 
-      this.#setBuyState()
-
+      this.#setMintState()
       this.#prepared = true
       await this.calculateCost()
     } catch (error) {
@@ -70,6 +96,112 @@ export default class extends Controller {
     }
   }
 
+  async mint() {
+    this.#disableForm()
+    this.#hideError()
+    this.#setMintingState()
+
+    try {
+      await this.#reserve()
+      const { psbt, signInputs } = this.#constructPurchaseTx()
+      const response = await requestSignPsbt({ psbt, signInputs })
+
+      if (response.status === "success") {
+        const executeResponse = await fetch(`/launchpad/${encodeURIComponent(this.collectionValue)}/mint`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inscriptionId: this.#inscriptionMetadata.id,
+            signedPsbt: response.result.psbt,
+            buyerOrdinalAddress: Wallet.ordinalAddress.address
+          })
+        })
+
+        const data = await executeResponse.json()
+        if (!executeResponse.ok) {
+          if (data.code === 'fee_too_low') {
+            await this.#loadMempoolFees()
+            await this.calculateCost()
+            this.#showError({ title: 'Fee rate too low', error: data.error })
+            this.#resetMintButton()
+            this.#enableForm()
+            return
+          }
+
+          throw new Error(String(data.error))
+        }
+
+        this.txid = data?.order?.txid ? String(data.order.txid) : null
+        this.#setSuccessState()
+      } else {
+        this.#resetTurnstile()
+        this.#resetMintButton()
+        this.#enableForm()
+
+        if (response.error.code !== RpcErrorCode.USER_REJECTION) {
+          this.#showError({ title: 'Mint Failed', error: response.error.message })
+        }
+      }
+    } catch (error) {
+      this.#resetTurnstile()
+      this.#showError({ title: 'Mint Failed', error })
+      this.#resetMintButton()
+      this.#enableForm()
+    }
+  }
+
+  async calculateCost() {
+    if (!this.#prepared) return false
+
+    try {
+      this.#hideError()
+
+      const { networkFees, satsRequired } = this.#determineFeesAndUTXOs()
+
+      this.feeRateTarget.textContent = `${this.#networkFeeRate} sat/vB`
+      this.feeTarget.textContent = formatSats(networkFees)
+      this.totalTarget.textContent = formatSats(satsRequired)
+
+      const totalUsd = this.element.querySelector('[data-usd-role="total"]')
+      if (totalUsd) totalUsd.setAttribute('data-usd-sats', String(satsRequired))
+
+      return true
+    } catch (error) {
+      console.log(error)
+      this.#showError({ title: 'Something went wrong', error })
+      return false
+    }
+  }
+
+  async #reserve() {
+    const payload = { buyerOrdinalAddress: Wallet.ordinalAddress.address }
+    if (this.hasTurnstileTarget) payload.turnstileToken = this.#turnstileToken
+
+    const response = await fetch(`/launchpad/${encodeURIComponent(this.collectionValue)}/reserve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      this.#resetTurnstile()
+      throw new Error(data.error || 'Failed to reserve inscription')
+    }
+
+    const data = await response.json()
+
+    const m = data.metadata
+    this.#inscriptionMetadata = {
+      id: m.id,
+      satpoint: m.satpoint,
+      address: m.address,
+      value: m.value,
+      contentType: m.content_type,
+      number: m.number
+    }
+  }
+
   async #loadMempoolFees() {
     this.#mempoolFees = await Mempool.feeEstimates()
   }
@@ -78,73 +210,22 @@ export default class extends Controller {
     this.#utxos = await Wallet.fetchUTXOs()
   }
 
-  async buy() {
-    this.#disableForm()
-    this.#hideError()
-    this.#setBuyingState()
-
-    try {
-      const { psbt, signInputs } = this.#constructPurchaseTx()
-      const response = await requestSignPsbt({ psbt, signInputs })
-
-      if (response.status === "success") {
-        const slug = window.location.pathname.split('/').filter(Boolean)[0]
-
-        const executeResponse = await fetch(`/sell/${encodeURIComponent(slug)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            inscriptionId: this.inscriptionMetadataValue.id,
-            signedPsbt: response.result.psbt
-          })
-        })
-
-        const data = await executeResponse.json()
-        if (!executeResponse.ok) {
-          this.#resetBuyButton()
-          this.#enableForm()
-
-          if (data.code === 'fee_too_low') {
-            await this.#loadMempoolFees()
-            await this.calculateCost()
-            this.#showError({ title: 'Fee rate too low', error: data.error })
-          } else {
-            throw new Error(String(data.error))
-          }
-        } else {
-          this.txid = data?.order?.txid ? String(data.order.txid) : null
-          this.#setSuccessState()
-        }
-      } else {
-        this.#resetBuyButton()
-        this.#enableForm()
-
-        if (response.error.code !== RpcErrorCode.USER_REJECTION) {
-          this.#showError({ title: 'Purchase Failed', error: response.error.message })
-        }
-      }  
-    } catch (error) {
-      this.#showError({ title: 'Purchase Failed', error })
-      this.#resetBuyButton()
-      this.#enableForm()
-    }
-  }
-
   #constructPurchaseTx() {
-    const { selectedUTXOs, networkFees, satsRequired } = this.#determineFeesAndUTXOs()
+    if (!this.#inscriptionMetadata) throw new Error('Missing inscription metadata')
+    const { selectedUTXOs, satsRequired } = this.#determineFeesAndUTXOs()
 
     const tx = new btc.Transaction()
 
-    const [txid, vout, _offset] = this.inscriptionMetadataValue.satpoint.split(':')
+    const [txid, vout, _offset] = this.#inscriptionMetadata.satpoint.split(':')
 
-    const decodedInscriptionAddress = btc.Address().decode(this.inscriptionMetadataValue.address)
+    const decodedInscriptionAddress = btc.Address().decode(this.#inscriptionMetadata.address)
     const inscriptionScript = btc.OutScript.encode(decodedInscriptionAddress)
 
     tx.addInput({
       txid: txid,
       index: parseInt(vout),
       sequence: 4294967293,
-      witnessUtxo: { script: inscriptionScript, amount: BigInt(this.inscriptionMetadataValue.value) },
+      witnessUtxo: { script: inscriptionScript, amount: BigInt(this.#inscriptionMetadata.value) },
     })
 
     let inputValue = BigInt(0)
@@ -168,7 +249,8 @@ export default class extends Controller {
       inputIndex += 1
     }
 
-    const inscriptionPaddingSats = this.inscriptionMetadataValue.value >= 330 ? this.inscriptionMetadataValue.value : 330n
+    const inscriptionValue = BigInt(this.#inscriptionMetadata.value)
+    const inscriptionPaddingSats = inscriptionValue >= 330n ? inscriptionValue : 330n
 
     tx.addOutputAddress(Wallet.ordinalAddress.address, BigInt(inscriptionPaddingSats))
     tx.addOutputAddress(this.paymentAddressValue, BigInt(this.priceValue))
@@ -187,29 +269,6 @@ export default class extends Controller {
     return { psbt, signInputs }
   }
 
-  async calculateCost() {
-    if (!this.#prepared) return false
-
-    try {
-      this.#hideError()
-
-      const { selectedUTXOs, networkFees, satsRequired } = this.#determineFeesAndUTXOs()
-
-      this.feeRateTarget.textContent = `${this.#networkFeeRate} sat/vB`
-      this.feeTarget.textContent = formatSats(networkFees)
-      this.totalTarget.textContent = formatSats(satsRequired)
-
-      const totalUsd = this.element.querySelector('[data-usd-role="total"]')
-      if (totalUsd) totalUsd.setAttribute('data-usd-sats', String(satsRequired))
-
-      return true
-    } catch (error) {
-      console.log(error)
-      this.#showError({ title: 'Something went wrong', error })
-      return false
-    }
-  }
-
   #selectedOptionalPayments() {
     const selected = []
 
@@ -224,7 +283,11 @@ export default class extends Controller {
   #determineFeesAndUTXOs() {
     let txSize = BASE_TX_SIZE
 
-    txSize += Wallet.calculateInputSize(this.inscriptionMetadataValue.address)
+    const sellerAddress = this.sellerAddressValue
+    if (!sellerAddress) throw new Error('Missing seller address')
+    const inscriptionAddress = this.#inscriptionMetadata?.address ?? sellerAddress
+
+    txSize += Wallet.calculateInputSize(inscriptionAddress)
     txSize += Wallet.calculateOutputSize(this.paymentAddressValue)
     txSize += Wallet.paymentUTXOOutputSize + Wallet.ordinalUTXOOutputSize
 
@@ -239,7 +302,10 @@ export default class extends Controller {
     let networkFees = Math.ceil(txSize * this.#networkFeeRate)
     let totalAvailableSats = BigInt(0)
 
-    const additionalPaddingSats = Math.max(0, 330 - this.inscriptionMetadataValue.value)
+    const lowestInscriptionUtxoSize = Number(this.lowestInscriptionUtxoSizeValue)
+    const additionalPaddingSats = this.#inscriptionMetadata
+      ? Math.max(0, lowestInscriptionUtxoSize - Number(this.#inscriptionMetadata.value))
+      : lowestInscriptionUtxoSize
     const optionalPaymentsSats = optionalPayments.reduce((sum, payment) => sum + payment.amount, 0)
     const baseRequiredSats = this.priceValue + additionalPaddingSats + optionalPaymentsSats
 
@@ -276,29 +342,37 @@ export default class extends Controller {
     this.prepareLabelTarget.textContent = 'Preparing…'
   }
 
-  #setBuyState() {
+  #setMintState() {
     this.prepareButtonTarget.classList.remove('show-on-connected')
     this.prepareButtonTarget.classList.add('hidden')
 
-    this.buyButtonTarget.classList.remove('hidden', 'purchase-success')
-    this.buyButtonTarget.classList.add('inline-flex')
-    this.buyButtonTarget.disabled = false
-    this.buySpinnerTarget.classList.add('button-spinner-hidden')
-    this.buyLabelTarget.textContent = 'Complete Purchase'
+    this.mintButtonTarget.classList.remove('hidden', 'purchase-success')
+    this.mintButtonTarget.classList.add('inline-flex')
+    this.mintSpinnerTarget.classList.add('button-spinner-hidden')
+    this.mintLabelTarget.textContent = 'Mint'
     this.successPanelTarget.classList.add('hidden')
+
+    this.#syncMintButtonWithTurnstile()
   }
 
-  #setBuyingState() {
-    this.buyButtonTarget.disabled = true
-    this.buySpinnerTarget.classList.remove('button-spinner-hidden')
-    this.buyLabelTarget.textContent = 'Purchasing…'
+  #setPrepareState() {
+    this.prepareButtonTarget.classList.remove('hidden')
+    this.prepareButtonTarget.classList.add('show-on-connected')
+    this.mintButtonTarget.classList.add('hidden')
+    this.#resetPrepareButton()
+  }
+
+  #setMintingState() {
+    this.mintButtonTarget.disabled = true
+    this.mintSpinnerTarget.classList.remove('button-spinner-hidden')
+    this.mintLabelTarget.textContent = 'Minting…'
   }
 
   #setSuccessState() {
-    this.buyButtonTarget.disabled = true
-    this.buySpinnerTarget.classList.add('button-spinner-hidden')
-    this.buyLabelTarget.textContent = 'Purchase Completed'
-    this.buyButtonTarget.classList.add('purchase-success')
+    this.mintButtonTarget.disabled = true
+    this.mintSpinnerTarget.classList.add('button-spinner-hidden')
+    this.mintLabelTarget.textContent = 'Mint Completed'
+    this.mintButtonTarget.classList.add('purchase-success')
 
     this.successPanelTarget.classList.remove('hidden')
     this.successLinkTarget.href = `https://mempool.space/tx/${this.txid}`
@@ -307,14 +381,14 @@ export default class extends Controller {
   #resetPrepareButton() {
     this.prepareButtonTarget.disabled = false
     this.prepareSpinnerTarget.classList.add('button-spinner-hidden')
-    this.prepareLabelTarget.textContent = 'Prepare Purchase'
+    this.prepareLabelTarget.textContent = 'Prepare Mint'
   }
 
-  #resetBuyButton() {
-    this.buyButtonTarget.disabled = false
-    this.buySpinnerTarget.classList.add('button-spinner-hidden')
-    this.buyLabelTarget.textContent = 'Complete Purchase'
-    this.buyButtonTarget.classList.remove('purchase-success')
+  #resetMintButton() {
+    this.#syncMintButtonWithTurnstile()
+    this.mintSpinnerTarget.classList.add('button-spinner-hidden')
+    this.mintLabelTarget.textContent = 'Mint'
+    this.mintButtonTarget.classList.remove('purchase-success')
   }
 
   #disableForm() {
@@ -332,20 +406,46 @@ export default class extends Controller {
   #showError({ title, error }) {
     const stack = error?.stack ? String(error.stack) : null
     if (stack) console.error(stack)
-    else console.error(error)
+    else if (error) console.error(error)
 
     const message = error?.message ? String(error.message) : String(error)
+    if (message === USER_REJECTED_SIGN_REQUEST_MESSAGE) return
 
     this.errorTitleTarget.textContent = title
     this.errorMessageTarget.textContent = message
     this.errorPanelTarget.classList.remove('hidden')
   }
 
-  #randomTxid() {
-    const bytes = new Uint8Array(32)
-    crypto.getRandomValues(bytes)
-    let out = ''
-    for (const b of bytes) out += b.toString(16).padStart(2, '0')
-    return out
+  #resetTurnstile() {
+    if (!this.hasTurnstileTarget) return
+
+    window.turnstile?.reset()
+    this.#turnstileToken = null
+    this.#syncMintButtonWithTurnstile()
+  }
+
+  #attachTurnstileCallbacks() {
+    window.launchpadTurnstileSuccess = (token) => {
+      this.#turnstileToken = token
+      this.#syncMintButtonWithTurnstile()
+    }
+
+    const clearToken = () => {
+      this.#turnstileToken = null
+      this.#syncMintButtonWithTurnstile()
+    }
+
+    window.launchpadTurnstileExpired = clearToken
+    window.launchpadTurnstileError = clearToken
+  }
+
+  #detachTurnstileCallbacks() {
+    delete window.launchpadTurnstileSuccess
+    delete window.launchpadTurnstileExpired
+    delete window.launchpadTurnstileError
+  }
+
+  #syncMintButtonWithTurnstile() {
+    this.mintButtonTarget.disabled = this.hasTurnstileTarget && !this.#turnstileToken
   }
 }

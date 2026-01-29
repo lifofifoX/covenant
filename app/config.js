@@ -20,6 +20,40 @@ function ensurePositiveInteger(value, label) {
   }
 }
 
+function validateCollectionPolicy({ collection, label, requireMinPostage }) {
+  ensureObject(collection, label)
+  ensureNonEmptyString(collection.slug, `${label}.slug`)
+  ensureNonEmptyString(collection.title, `${label}.title`)
+  ensurePositiveInteger(collection.price_sats, `${label}.price_sats`)
+  ensureNonEmptyString(collection.payment_address, `${label}.payment_address`)
+
+  if (requireMinPostage) {
+    ensurePositiveInteger(collection.lowest_inscription_utxo_size, `${label}.lowest_inscription_utxo_size`)
+  }
+
+  const hasParent = typeof collection.parent_inscription_id === 'string' && collection.parent_inscription_id.trim() !== ''
+  const hasGallery = typeof collection.gallery_inscription_id === 'string' && collection.gallery_inscription_id.trim() !== ''
+  const hasIds = Array.isArray(collection.inscription_ids) && collection.inscription_ids.length > 0
+  if (!hasParent && !hasGallery && !hasIds) {
+    throw new Error(
+      `Invalid ${label}: must set either parent_inscription_id, gallery_inscription_id, or inscription_ids`
+    )
+  }
+
+  if (collection.optional_payments !== undefined) {
+    if (!Array.isArray(collection.optional_payments)) {
+      throw new Error(`Invalid ${label}.optional_payments: expected an array`)
+    }
+    for (const [pidx, p] of collection.optional_payments.entries()) {
+      ensureObject(p, `${label}.optional_payments[${pidx}]`)
+      ensureNonEmptyString(p.title, `${label}.optional_payments[${pidx}].title`)
+      ensureNonEmptyString(p.description, `${label}.optional_payments[${pidx}].description`)
+      ensurePositiveInteger(p.amount, `${label}.optional_payments[${pidx}].amount`)
+      ensureNonEmptyString(p.address, `${label}.optional_payments[${pidx}].address`)
+    }
+  }
+}
+
 function validateStoreConfig(config) {
   ensureObject(config, 'config/store.yml')
   ensureNonEmptyString(config.ord_api_url, 'config/store.yml: ord_api_url')
@@ -36,34 +70,39 @@ function validatePolicy(policy) {
     throw new Error(`Invalid config/policy.yml: expected 'selling' to be an array`)
   }
 
+  const launchpad = policy.launchpad
+  const launchpadCollections = Array.isArray(launchpad?.collections) ? launchpad.collections : []
+
+  if (launchpad !== undefined) {
+    ensureObject(launchpad, 'config/policy.yml: launchpad')
+    ensureNonEmptyString(launchpad.seller_address, 'config/policy.yml: launchpad.seller_address')
+    if (!Array.isArray(launchpad.collections)) {
+      throw new Error(`Invalid config/policy.yml: launchpad.collections must be an array`)
+    }
+  }
+
   for (const [idx, c] of policy.selling.entries()) {
-    ensureObject(c, `config/policy.yml: selling[${idx}]`)
-    ensureNonEmptyString(c.slug, `config/policy.yml: selling[${idx}].slug`)
-    ensureNonEmptyString(c.title, `config/policy.yml: selling[${idx}].title`)
-    ensurePositiveInteger(c.price_sats, `config/policy.yml: selling[${idx}].price_sats`)
-    ensureNonEmptyString(c.payment_address, `config/policy.yml: selling[${idx}].payment_address`)
+    validateCollectionPolicy({
+      collection: c,
+      label: `config/policy.yml: selling[${idx}]`,
+      requireMinPostage: false
+    })
+  }
 
-    const hasParent = typeof c.parent_inscription_id === 'string' && c.parent_inscription_id.trim() !== ''
-    const hasGallery = typeof c.gallery_inscription_id === 'string' && c.gallery_inscription_id.trim() !== ''
-    const hasIds = Array.isArray(c.inscription_ids) && c.inscription_ids.length > 0
-    if (!hasParent && !hasGallery && !hasIds) {
-      throw new Error(
-        `Invalid config/policy.yml: selling[${idx}] must set either parent_inscription_id, gallery_inscription_id, or inscription_ids`
-      )
-    }
+  for (const [idx, c] of launchpadCollections.entries()) {
+    validateCollectionPolicy({
+      collection: c,
+      label: `config/policy.yml: launchpad.collections[${idx}]`,
+      requireMinPostage: true
+    })
+  }
 
-    if (c.optional_payments !== undefined) {
-      if (!Array.isArray(c.optional_payments)) {
-        throw new Error(`Invalid config/policy.yml: selling[${idx}].optional_payments must be an array`)
-      }
-      for (const [pidx, p] of c.optional_payments.entries()) {
-        ensureObject(p, `config/policy.yml: selling[${idx}].optional_payments[${pidx}]`)
-        ensureNonEmptyString(p.title, `config/policy.yml: selling[${idx}].optional_payments[${pidx}].title`)
-        ensureNonEmptyString(p.description, `config/policy.yml: selling[${idx}].optional_payments[${pidx}].description`)
-        ensurePositiveInteger(p.amount, `config/policy.yml: selling[${idx}].optional_payments[${pidx}].amount`)
-        ensureNonEmptyString(p.address, `config/policy.yml: selling[${idx}].optional_payments[${pidx}].address`)
-      }
+  const seenSlugs = new Set()
+  for (const collection of [...policy.selling, ...launchpadCollections]) {
+    if (seenSlugs.has(collection.slug)) {
+      throw new Error(`Invalid config/policy.yml: duplicate collection slug '${collection.slug}'`)
     }
+    seenSlugs.add(collection.slug)
   }
 }
 

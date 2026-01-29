@@ -33,6 +33,16 @@ export function renderPage({ viewName, vars }) {
   return layout({ ...viewVars, body, include })
 }
 
+export function renderView({ viewName, vars }) {
+  const theme = currentTheme()
+  const view = theme[viewName]
+  if (!view) throw new Error(`Missing view: ${viewName}`)
+
+  const viewVars = { ...vars, CONFIG, formatSats }
+  const include = makeInclude({ theme, baseVars: viewVars })
+  return view({ ...viewVars, include })
+}
+
 export function renderCard({ vars }) {
   const theme = currentTheme()
   const card = theme['partials/inscription-card.html']
