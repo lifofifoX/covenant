@@ -30,6 +30,7 @@
                 <% } %>
                 <iframe
                   src="https://ordinals.com/preview/<%= encodeURIComponent(o.inscription_id) %>"
+                  allow="accelerometer; gyroscope"
                   class="block h-full w-full border-0 pointer-events-none opacity-0 transition-opacity duration-300"
                   loading="lazy"
                   data-image-target="media"
@@ -67,5 +68,4 @@
     </div>
   <% } %>
 </section>
-
 
