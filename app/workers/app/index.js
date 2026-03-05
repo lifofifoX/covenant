@@ -11,7 +11,6 @@ import { launchpadSalesController } from '../../controllers/launchpad_sales_cont
 import { launchpadProgressController } from '../../controllers/launchpad_progress_controller.js'
 import { runSyncCollectionsCron } from '../../crons/sync_collections_cron.js'
 import { runOrdersCron } from '../../crons/orders_cron.js'
-import { runBuyOrdersCron } from '../../crons/buy_orders_cron.js'
 import { buyingHomeController } from '../../controllers/buying_home_controller.js'
 import { buyingCollectionController } from '../../controllers/buying_collection_controller.js'
 import { buyingEligibleController } from '../../controllers/buying_eligible_controller.js'
@@ -49,17 +48,17 @@ export default {
   fetch: app.fetch,
   scheduled: (event, env, ctx) => {
     switch (event?.cron) {
+      case '*/1 * * * *':
+        ctx.waitUntil(refreshFundingWallet(env))
+        return
       case '*/5 * * * *':
         runOrdersCron(event, env, ctx)
-        runBuyOrdersCron(event, env, ctx)
-        ctx.waitUntil(refreshFundingWallet(env))
         return
       case '*/10 * * * *':
         runSyncCollectionsCron(event, env, ctx)
         return
       default:
         runOrdersCron(event, env, ctx)
-        runBuyOrdersCron(event, env, ctx)
         runSyncCollectionsCron(event, env, ctx)
         ctx.waitUntil(refreshFundingWallet(env))
         return

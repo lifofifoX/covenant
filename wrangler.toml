@@ -48,7 +48,7 @@ tag = "v1"
 new_sqlite_classes = ["LaunchpadReservationWorker"]
 
 [triggers]
-crons = ["*/5 * * * *", "*/10 * * * *"]
+crons = ["*/1 * * * *", "*/5 * * * *", "*/10 * * * *"]
 
 [[rules]]
 globs = ["**/*.html"]

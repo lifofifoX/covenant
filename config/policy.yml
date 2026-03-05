@@ -38,3 +38,8 @@ buying:
     catalog_slug: cocks
     price_sats: 500
     destination_address: bc1pyqz80xg3mchfxa5va4d0kwzzpc52jx63ljw4hjw33s7w97p6x58qucrxy6
+  - slug: nakamoto-archives-buyback
+    title: NAKAMOTO ARCHIVES BUYBACK
+    catalog_slug: na-art
+    price_sats: 500
+    destination_address: bc1pyqz80xg3mchfxa5va4d0kwzzpc52jx63ljw4hjw33s7w97p6x58qucrxy6

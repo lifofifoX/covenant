@@ -1,9 +1,12 @@
 import { Mempool } from '../../models/mempool.js'
+import { setBuyOrderStatus, setBuyOrderStatusByTxid } from '../../models/db/buy_orders.js'
 import { StoreWallet } from '../../models/store_wallet.js'
 import { safeErrorMessage } from '../../utils/logging.js'
 
 const REFRESH_TTL_MS = 15_000
 const DEFAULT_RESERVATION_TTL_MS = 60_000
+const REBROADCAST_BACKOFF_MS = 30_000
+const TRACKED_RECONCILIATION_LIMIT = 50
 
 class HttpError extends Error {
   constructor(status, message, code = null) {
@@ -28,6 +31,11 @@ function normalizeReservationTtl(value) {
 
 function outpointFor(utxo) {
   return `${utxo.txid}:${utxo.vout}`
+}
+
+function statusCodeForBroadcastResult(result) {
+  const match = String(result ?? '').match(/^HTTP\s+(\d{3})\b/)
+  return match ? Number(match[1]) : null
 }
 
 export class FundingWalletWorker {
@@ -56,10 +64,15 @@ export class FundingWalletWorker {
           ON funding_utxos (reserved_by, reserved_until_ms);
         CREATE TABLE IF NOT EXISTS tracked_transactions (
           txid TEXT PRIMARY KEY,
+          order_id TEXT,
           raw_tx_hex TEXT NOT NULL,
           collection_slug TEXT,
           inscription_id TEXT,
           status TEXT NOT NULL,
+          failure_reason TEXT,
+          rebroadcast_count INTEGER NOT NULL DEFAULT 0,
+          last_seen_at_ms INTEGER,
+          last_broadcast_at_ms INTEGER,
           created_at_ms INTEGER NOT NULL,
           updated_at_ms INTEGER NOT NULL
         );
@@ -71,6 +84,21 @@ export class FundingWalletWorker {
 
       try {
         this.sql.exec('ALTER TABLE funding_utxos ADD COLUMN address TEXT')
+      } catch {}
+      try {
+        this.sql.exec('ALTER TABLE tracked_transactions ADD COLUMN order_id TEXT')
+      } catch {}
+      try {
+        this.sql.exec('ALTER TABLE tracked_transactions ADD COLUMN failure_reason TEXT')
+      } catch {}
+      try {
+        this.sql.exec('ALTER TABLE tracked_transactions ADD COLUMN rebroadcast_count INTEGER NOT NULL DEFAULT 0')
+      } catch {}
+      try {
+        this.sql.exec('ALTER TABLE tracked_transactions ADD COLUMN last_seen_at_ms INTEGER')
+      } catch {}
+      try {
+        this.sql.exec('ALTER TABLE tracked_transactions ADD COLUMN last_broadcast_at_ms INTEGER')
       } catch {}
     })
   }
@@ -223,7 +251,7 @@ export class FundingWalletWorker {
     return { released: true, reservationId }
   }
 
-  async #handleConsume({ reservationId, txid, rawTxHex, collectionSlug = null, inscriptionId = null, spentOutpoints = [] }) {
+  async #handleConsume({ orderId = null, reservationId, txid, rawTxHex, collectionSlug = null, inscriptionId = null, spentOutpoints = [] }) {
     if (typeof reservationId !== 'string' || reservationId.trim() === '') {
       throw new HttpError(400, 'Missing reservationId')
     }
@@ -254,20 +282,31 @@ export class FundingWalletWorker {
     this.sql.exec(
       `INSERT INTO tracked_transactions (
          txid,
+         order_id,
          raw_tx_hex,
          collection_slug,
          inscription_id,
          status,
+         failure_reason,
+         rebroadcast_count,
+         last_seen_at_ms,
+         last_broadcast_at_ms,
          created_at_ms,
          updated_at_ms
-       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, 0, NULL, ?7, ?7, ?7)
        ON CONFLICT(txid) DO UPDATE
-       SET raw_tx_hex = excluded.raw_tx_hex,
+       SET order_id = excluded.order_id,
+           raw_tx_hex = excluded.raw_tx_hex,
            collection_slug = excluded.collection_slug,
            inscription_id = excluded.inscription_id,
            status = excluded.status,
+           failure_reason = excluded.failure_reason,
+           rebroadcast_count = excluded.rebroadcast_count,
+           last_seen_at_ms = excluded.last_seen_at_ms,
+           last_broadcast_at_ms = excluded.last_broadcast_at_ms,
            updated_at_ms = excluded.updated_at_ms`,
       txid,
+      typeof orderId === 'string' && orderId.trim() !== '' ? orderId.trim() : null,
       rawTxHex,
       collectionSlug,
       inscriptionId,
@@ -303,7 +342,7 @@ export class FundingWalletWorker {
       }))
     )
     this.#syncUtxos({ utxoResponses, now })
-    await this.#refreshTrackedTransactions(now)
+    await this.#reconcileTrackedTransactions(now)
     this.#setMetadataValue('last_refresh_ms', String(now))
   }
 
@@ -352,32 +391,78 @@ export class FundingWalletWorker {
     this.#releaseExpiredReservations(now)
   }
 
-  async #refreshTrackedTransactions(now) {
+  async #reconcileTrackedTransactions(now) {
     const tracked = this.sql
       .exec(
-        `SELECT txid
+        `SELECT txid,
+                order_id,
+                raw_tx_hex,
+                collection_slug,
+                inscription_id,
+                status,
+                failure_reason,
+                rebroadcast_count,
+                last_seen_at_ms,
+                last_broadcast_at_ms,
+                created_at_ms,
+                updated_at_ms
          FROM tracked_transactions
-         WHERE status = 'pending'
-         ORDER BY created_at_ms DESC
-         LIMIT 50`
+         WHERE status IN ('pending', 'dropped')
+         ORDER BY updated_at_ms ASC
+         LIMIT ?1`,
+        TRACKED_RECONCILIATION_LIMIT
       )
       .toArray()
 
     for (const row of tracked) {
       try {
         const tx = await Mempool.tx(row.txid)
-        if (!tx?.status?.confirmed) continue
+        if (tx?.status?.confirmed) {
+          await this.#markTrackedTransactionConfirmed(row, now)
+          continue
+        }
 
-        this.sql.exec(
-          `UPDATE tracked_transactions
-           SET status = 'confirmed',
-               updated_at_ms = ?2
-           WHERE txid = ?1`,
-          row.txid,
-          now
-        )
-      } catch {
-        // Leave pending; the D1 order cron handles rebroadcast and failure states.
+        if (tx) {
+          row.status = 'pending'
+          row.failure_reason = null
+          row.last_seen_at_ms = now
+          row.updated_at_ms = now
+          this.#writeTrackedTransaction(row)
+          continue
+        }
+
+        row.status = 'dropped'
+        row.failure_reason = 'tx_not_found'
+        row.updated_at_ms = now
+        this.#writeTrackedTransaction(row)
+
+        const lastBroadcastAtMs = Number(row.last_broadcast_at_ms ?? 0)
+        if (lastBroadcastAtMs > 0 && now - lastBroadcastAtMs < REBROADCAST_BACKOFF_MS) continue
+
+        const broadcastResult = await Mempool.broadcastTx(row.raw_tx_hex)
+        if (broadcastResult === true) {
+          row.status = 'pending'
+          row.failure_reason = null
+          row.rebroadcast_count = Number(row.rebroadcast_count ?? 0) + 1
+          row.last_broadcast_at_ms = now
+          row.updated_at_ms = now
+          this.#writeTrackedTransaction(row)
+          continue
+        }
+
+        const failureReason = String(broadcastResult ?? 'Broadcast failed')
+        if (statusCodeForBroadcastResult(failureReason) === 400) {
+          await this.#markTrackedTransactionFailed(row, now, failureReason)
+          continue
+        }
+
+        row.failure_reason = failureReason
+        row.updated_at_ms = now
+        this.#writeTrackedTransaction(row)
+      } catch (error) {
+        row.failure_reason = safeErrorMessage(error)
+        row.updated_at_ms = now
+        this.#writeTrackedTransaction(row)
       }
     }
   }
@@ -398,12 +483,76 @@ export class FundingWalletWorker {
   #trackedTransactions() {
     return this.sql
       .exec(
-        `SELECT txid, collection_slug, inscription_id, status, created_at_ms, updated_at_ms
+        `SELECT txid,
+                order_id,
+                collection_slug,
+                inscription_id,
+                status,
+                failure_reason,
+                rebroadcast_count,
+                last_seen_at_ms,
+                last_broadcast_at_ms,
+                created_at_ms,
+                updated_at_ms
          FROM tracked_transactions
          ORDER BY created_at_ms DESC
          LIMIT 20`
       )
       .toArray()
+  }
+
+  #writeTrackedTransaction(row) {
+    this.sql.exec(
+      `UPDATE tracked_transactions
+       SET order_id = ?2,
+           raw_tx_hex = ?3,
+           collection_slug = ?4,
+           inscription_id = ?5,
+           status = ?6,
+           failure_reason = ?7,
+           rebroadcast_count = ?8,
+           last_seen_at_ms = ?9,
+           last_broadcast_at_ms = ?10,
+           updated_at_ms = ?11
+       WHERE txid = ?1`,
+      row.txid,
+      row.order_id ?? null,
+      row.raw_tx_hex,
+      row.collection_slug ?? null,
+      row.inscription_id ?? null,
+      row.status,
+      row.failure_reason ?? null,
+      Number(row.rebroadcast_count ?? 0),
+      row.last_seen_at_ms ?? null,
+      row.last_broadcast_at_ms ?? null,
+      Number(row.updated_at_ms ?? Date.now())
+    )
+  }
+
+  async #markTrackedTransactionConfirmed(row, now) {
+    row.status = 'confirmed'
+    row.failure_reason = null
+    row.last_seen_at_ms = now
+    row.updated_at_ms = now
+    this.#writeTrackedTransaction(row)
+    await this.#syncBuyOrderStatus(row, 'confirmed')
+  }
+
+  async #markTrackedTransactionFailed(row, now, failureReason) {
+    row.status = 'failed'
+    row.failure_reason = failureReason
+    row.updated_at_ms = now
+    this.#writeTrackedTransaction(row)
+    await this.#syncBuyOrderStatus(row, 'failed')
+  }
+
+  async #syncBuyOrderStatus(row, status) {
+    if (row.order_id) {
+      await setBuyOrderStatus({ db: this.env.DB, id: row.order_id, status, txid: row.txid })
+      return
+    }
+
+    await setBuyOrderStatusByTxid({ db: this.env.DB, txid: row.txid, status })
   }
 
   #releaseExpiredReservations(now) {

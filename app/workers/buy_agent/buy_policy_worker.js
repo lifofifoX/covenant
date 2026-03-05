@@ -316,6 +316,7 @@ export class BuyPolicyWorker {
       })
 
       await this.#fundingRequest('/consume', {
+        orderId: order.id,
         reservationId: trade.reservation_id,
         txid: tx.id,
         rawTxHex: tx.hex,

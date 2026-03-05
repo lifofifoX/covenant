@@ -77,6 +77,11 @@ export async function getBuyOrderById({ db, id }) {
   return row ?? null
 }
 
+export async function getBuyOrderByTxid({ db, txid }) {
+  const row = await withD1Retry(() => db.prepare('SELECT * FROM buy_orders WHERE txid = ?1 ORDER BY created_at DESC LIMIT 1').bind(txid).first())
+  return row ?? null
+}
+
 export async function getActiveBuyOrderForInscription({ db, inscriptionId }) {
   const row = await withD1Retry(() =>
     db
@@ -115,6 +120,12 @@ export async function setBuyOrderStatus({ db, id, status, txid }) {
   )
 
   return getBuyOrderById({ db, id })
+}
+
+export async function setBuyOrderStatusByTxid({ db, txid, status }) {
+  const order = await getBuyOrderByTxid({ db, txid })
+  if (!order) return null
+  return setBuyOrderStatus({ db, id: order.id, status, txid })
 }
 
 export async function listBuyOrdersByCollection({ db, collectionSlug, limit = 10 }) {
