@@ -1,6 +1,11 @@
 import { parse } from 'yaml'
 import storeYaml from '../config/store.yml'
 import policyYaml from '../config/policy.yml'
+import {
+  lookupCatalogCollection,
+  lookupCatalogCollectionBySelector,
+  selectorsFromCatalogCollection
+} from './models/collections_catalog.js'
 
 function ensureObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -20,12 +25,85 @@ function ensurePositiveInteger(value, label) {
   }
 }
 
-function validateCollectionPolicy({ collection, label, requireMinPostage }) {
+function hasDirectCollectionSelectors(collection) {
+  return (
+    (typeof collection.parent_inscription_id === 'string' && collection.parent_inscription_id.trim() !== '') ||
+    (typeof collection.gallery_inscription_id === 'string' && collection.gallery_inscription_id.trim() !== '') ||
+    (Array.isArray(collection.inscription_ids) && collection.inscription_ids.length > 0)
+  )
+}
+
+function normalizeCollectionPolicy(collection, label) {
+  ensureObject(collection, label)
+
+  if (collection.catalog_slug === undefined) {
+    return collection
+  }
+
+  ensureNonEmptyString(collection.catalog_slug, `${label}.catalog_slug`)
+
+  if (hasDirectCollectionSelectors(collection)) {
+    throw new Error(
+      `Invalid ${label}: cannot combine catalog_slug with parent_inscription_id, gallery_inscription_id, or inscription_ids`
+    )
+  }
+
+  const catalogCollection = lookupCatalogCollection(collection.catalog_slug)
+  return {
+    ...collection,
+    slug: collection.slug ?? catalogCollection.slug,
+    title: collection.title ?? catalogCollection.name,
+    ...selectorsFromCatalogCollection(catalogCollection)
+  }
+}
+
+function normalizePolicy(policy) {
+  ensureObject(policy, 'config/policy.yml')
+
+  const normalizedSelling = Array.isArray(policy.selling)
+    ? policy.selling.map((collection, idx) => normalizeCollectionPolicy(collection, `config/policy.yml: selling[${idx}]`))
+    : policy.selling
+
+  const normalizedLaunchpadCollections = Array.isArray(policy.launchpad?.collections)
+    ? policy.launchpad.collections.map((collection, idx) =>
+        normalizeCollectionPolicy(collection, `config/policy.yml: launchpad.collections[${idx}]`)
+      )
+    : policy.launchpad?.collections
+
+  const normalizedBuying = Array.isArray(policy.buying)
+    ? policy.buying.map((collection, idx) => normalizeCollectionPolicy(collection, `config/policy.yml: buying[${idx}]`))
+    : policy.buying
+
+  return {
+    ...policy,
+    selling: normalizedSelling,
+    launchpad: policy.launchpad
+      ? {
+          ...policy.launchpad,
+          collections: normalizedLaunchpadCollections
+        }
+      : policy.launchpad,
+    buying: normalizedBuying
+  }
+}
+
+function validateCollectionPolicy({
+  collection,
+  label,
+  requireMinPostage,
+  requireDestinationAddress = false,
+  preferCatalogSlug = false
+}) {
   ensureObject(collection, label)
   ensureNonEmptyString(collection.slug, `${label}.slug`)
   ensureNonEmptyString(collection.title, `${label}.title`)
   ensurePositiveInteger(collection.price_sats, `${label}.price_sats`)
-  ensureNonEmptyString(collection.payment_address, `${label}.payment_address`)
+
+  if (requireDestinationAddress) {
+    ensureNonEmptyString(collection.destination_address, `${label}.destination_address`)
+  } else {
+    ensureNonEmptyString(collection.payment_address, `${label}.payment_address`)
+  }
 
   if (requireMinPostage) {
     ensurePositiveInteger(collection.lowest_inscription_utxo_size, `${label}.lowest_inscription_utxo_size`)
@@ -38,6 +116,19 @@ function validateCollectionPolicy({ collection, label, requireMinPostage }) {
     throw new Error(
       `Invalid ${label}: must set either parent_inscription_id, gallery_inscription_id, or inscription_ids`
     )
+  }
+
+  if (preferCatalogSlug && collection.catalog_slug === undefined && !hasIds && hasParent !== hasGallery) {
+    const catalogMatch = lookupCatalogCollectionBySelector({
+      parentInscriptionId: hasParent ? collection.parent_inscription_id : null,
+      galleryInscriptionId: hasGallery ? collection.gallery_inscription_id : null
+    })
+
+    if (catalogMatch) {
+      throw new Error(
+        `Invalid ${label}: matches catalog collection '${catalogMatch.slug}'; use catalog_slug: ${catalogMatch.slug}`
+      )
+    }
   }
 
   if (collection.optional_payments !== undefined) {
@@ -72,6 +163,7 @@ function validatePolicy(policy) {
 
   const launchpad = policy.launchpad
   const launchpadCollections = Array.isArray(launchpad?.collections) ? launchpad.collections : []
+  const buyingCollections = Array.isArray(policy.buying) ? policy.buying : []
 
   if (launchpad !== undefined) {
     ensureObject(launchpad, 'config/policy.yml: launchpad')
@@ -85,7 +177,8 @@ function validatePolicy(policy) {
     validateCollectionPolicy({
       collection: c,
       label: `config/policy.yml: selling[${idx}]`,
-      requireMinPostage: false
+      requireMinPostage: false,
+      preferCatalogSlug: true
     })
   }
 
@@ -97,8 +190,22 @@ function validatePolicy(policy) {
     })
   }
 
+  if (policy.buying !== undefined && !Array.isArray(policy.buying)) {
+    throw new Error(`Invalid config/policy.yml: expected 'buying' to be an array`)
+  }
+
+  for (const [idx, c] of buyingCollections.entries()) {
+    validateCollectionPolicy({
+      collection: c,
+      label: `config/policy.yml: buying[${idx}]`,
+      requireMinPostage: false,
+      requireDestinationAddress: true,
+      preferCatalogSlug: true
+    })
+  }
+
   const seenSlugs = new Set()
-  for (const collection of [...policy.selling, ...launchpadCollections]) {
+  for (const collection of [...policy.selling, ...launchpadCollections, ...buyingCollections]) {
     if (seenSlugs.has(collection.slug)) {
       throw new Error(`Invalid config/policy.yml: duplicate collection slug '${collection.slug}'`)
     }
@@ -107,7 +214,7 @@ function validatePolicy(policy) {
 }
 
 export const CONFIG = parse(storeYaml)
-export const POLICY = parse(policyYaml)
+export const POLICY = normalizePolicy(parse(policyYaml))
 
 validateStoreConfig(CONFIG)
 validatePolicy(POLICY)

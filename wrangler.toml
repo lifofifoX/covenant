@@ -23,6 +23,16 @@ script_name = "covenant-signing-agent"
 name = "LAUNCHPAD_RESERVATIONS"
 class_name = "LaunchpadReservationWorker"
 
+[[durable_objects.bindings]]
+name = "BUY_POLICY"
+class_name = "BuyPolicyWorker"
+script_name = "covenant-buy-agent"
+
+[[durable_objects.bindings]]
+name = "FUNDING_WALLET"
+class_name = "FundingWalletWorker"
+script_name = "covenant-buy-agent"
+
 [[ratelimits]]
 name = "LAUNCHPAD_ADDRESS_LIMITER"
 namespace_id = "3001"

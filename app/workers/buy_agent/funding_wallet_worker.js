@@ -1,0 +1,413 @@
+import { Mempool } from '../../models/mempool.js'
+import { StoreWallet } from '../../models/store_wallet.js'
+import { safeErrorMessage } from '../../utils/logging.js'
+
+const REFRESH_TTL_MS = 15_000
+const DEFAULT_RESERVATION_TTL_MS = 60_000
+
+class HttpError extends Error {
+  constructor(status, message, code = null) {
+    super(message)
+    this.status = status
+    this.code = code
+  }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
+
+function normalizeReservationTtl(value) {
+  const ttl = Number(value)
+  if (!Number.isFinite(ttl) || ttl <= 0) return DEFAULT_RESERVATION_TTL_MS
+  return Math.min(ttl, 5 * 60 * 1000)
+}
+
+function outpointFor(utxo) {
+  return `${utxo.txid}:${utxo.vout}`
+}
+
+export class FundingWalletWorker {
+  constructor(state, env) {
+    this.state = state
+    this.env = env
+    this.sql = state.storage.sql
+    this.wallet = StoreWallet.fromEnv(env, 'FUNDING_WALLET_PRIVATE_KEY')
+
+    this.state.blockConcurrencyWhile(async () => {
+      this.sql.exec(`
+        CREATE TABLE IF NOT EXISTS funding_utxos (
+          outpoint TEXT PRIMARY KEY,
+          txid TEXT NOT NULL,
+          vout INTEGER NOT NULL,
+          value INTEGER NOT NULL,
+          confirmed INTEGER NOT NULL,
+          reserved_by TEXT,
+          reserved_until_ms INTEGER,
+          updated_at_ms INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_funding_utxos_confirmed
+          ON funding_utxos (confirmed, value DESC);
+        CREATE INDEX IF NOT EXISTS idx_funding_utxos_reserved
+          ON funding_utxos (reserved_by, reserved_until_ms);
+        CREATE TABLE IF NOT EXISTS tracked_transactions (
+          txid TEXT PRIMARY KEY,
+          raw_tx_hex TEXT NOT NULL,
+          collection_slug TEXT,
+          inscription_id TEXT,
+          status TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,
+          updated_at_ms INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS metadata (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `)
+    })
+  }
+
+  async fetch(request) {
+    try {
+      const url = new URL(request.url)
+
+      if (request.method === 'GET' && url.pathname === '/address') {
+        return json({ fundingAddress: this.wallet.taprootAddress })
+      }
+
+      if (request.method === 'POST' && url.pathname === '/available') {
+        const body = await request.json().catch(() => ({}))
+        return json(await this.#handleAvailable({ forceRefresh: body.forceRefresh === true }))
+      }
+
+      if (request.method === 'POST' && url.pathname === '/reserve') {
+        const body = await request.json().catch(() => ({}))
+        return json(await this.#handleReserve(body))
+      }
+
+      if (request.method === 'POST' && url.pathname === '/release') {
+        const body = await request.json().catch(() => ({}))
+        return json(await this.#handleRelease(body))
+      }
+
+      if (request.method === 'POST' && url.pathname === '/consume') {
+        const body = await request.json().catch(() => ({}))
+        return json(await this.#handleConsume(body))
+      }
+
+      if (request.method === 'POST' && url.pathname === '/refresh') {
+        return json(await this.#handleRefresh())
+      }
+
+      throw new HttpError(404, 'Not found')
+    } catch (error) {
+      console.error(safeErrorMessage(error))
+      if (error instanceof HttpError) {
+        return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status)
+      }
+      return json({ error: error?.message ? String(error.message) : String(error) }, 500)
+    }
+  }
+
+  async #handleAvailable({ forceRefresh = false } = {}) {
+    const now = Date.now()
+    await this.#maybeRefresh({ now, force: forceRefresh })
+    this.#releaseExpiredReservations(now)
+
+    const utxos = this.#availableRows(now).map((row) => ({
+      outpoint: row.outpoint,
+      txid: row.txid,
+      vout: Number(row.vout),
+      value: Number(row.value),
+      confirmed: Boolean(row.confirmed)
+    }))
+    const totalAvailable = utxos.reduce((sum, utxo) => sum + utxo.value, 0)
+
+    return {
+      fundingAddress: this.wallet.taprootAddress,
+      utxos,
+      totalAvailable,
+      tracked: this.#trackedTransactions()
+    }
+  }
+
+  async #handleReserve({ reservationId, outpoints, ttlMs }) {
+    if (typeof reservationId !== 'string' || reservationId.trim() === '') {
+      throw new HttpError(400, 'Missing reservationId')
+    }
+
+    const requestedOutpoints = Array.isArray(outpoints) ? [...new Set(outpoints.filter(Boolean))] : []
+    if (requestedOutpoints.length === 0) {
+      throw new HttpError(400, 'Missing outpoints')
+    }
+
+    const now = Date.now()
+    await this.#maybeRefresh({ now, force: false })
+    this.#releaseExpiredReservations(now)
+
+    const selected = []
+    for (const outpoint of requestedOutpoints) {
+      const row = this.sql
+        .exec(
+          `SELECT outpoint, txid, vout, value, confirmed, reserved_by, reserved_until_ms
+           FROM funding_utxos
+           WHERE outpoint = ?1
+           LIMIT 1`,
+          outpoint
+        )
+        .toArray()[0]
+
+      if (!row || Number(row.confirmed) !== 1) {
+        throw new HttpError(409, 'Funding UTXO is no longer available', 'utxo_unavailable')
+      }
+
+      const reservedUntil = Number(row.reserved_until_ms ?? 0)
+      if (row.reserved_by && reservedUntil > now && row.reserved_by !== reservationId) {
+        throw new HttpError(409, 'Funding UTXO is already reserved', 'utxo_reserved')
+      }
+
+      selected.push({
+        outpoint: row.outpoint,
+        txid: row.txid,
+        vout: Number(row.vout),
+        value: Number(row.value)
+      })
+    }
+
+    const expiresAt = now + normalizeReservationTtl(ttlMs)
+    for (const outpoint of requestedOutpoints) {
+      this.sql.exec(
+        `UPDATE funding_utxos
+         SET reserved_by = ?1,
+             reserved_until_ms = ?2,
+             updated_at_ms = ?3
+         WHERE outpoint = ?4`,
+        reservationId,
+        expiresAt,
+        now,
+        outpoint
+      )
+    }
+
+    return { reservationId, expiresAt, utxos: selected }
+  }
+
+  async #handleRelease({ reservationId }) {
+    if (typeof reservationId !== 'string' || reservationId.trim() === '') {
+      throw new HttpError(400, 'Missing reservationId')
+    }
+
+    this.sql.exec(
+      `UPDATE funding_utxos
+       SET reserved_by = NULL,
+           reserved_until_ms = NULL
+       WHERE reserved_by = ?1`,
+      reservationId
+    )
+
+    return { released: true, reservationId }
+  }
+
+  async #handleConsume({ reservationId, txid, rawTxHex, collectionSlug = null, inscriptionId = null, spentOutpoints = [] }) {
+    if (typeof reservationId !== 'string' || reservationId.trim() === '') {
+      throw new HttpError(400, 'Missing reservationId')
+    }
+    if (typeof txid !== 'string' || txid.trim() === '') {
+      throw new HttpError(400, 'Missing txid')
+    }
+    if (typeof rawTxHex !== 'string' || rawTxHex.trim() === '') {
+      throw new HttpError(400, 'Missing rawTxHex')
+    }
+
+    const now = Date.now()
+    const outpoints = Array.isArray(spentOutpoints) ? [...new Set(spentOutpoints.filter(Boolean))] : []
+
+    for (const outpoint of outpoints) {
+      this.sql.exec('DELETE FROM funding_utxos WHERE outpoint = ?1', outpoint)
+    }
+
+    this.sql.exec(
+      `UPDATE funding_utxos
+       SET reserved_by = NULL,
+           reserved_until_ms = NULL,
+           updated_at_ms = ?2
+       WHERE reserved_by = ?1`,
+      reservationId,
+      now
+    )
+
+    this.sql.exec(
+      `INSERT INTO tracked_transactions (
+         txid,
+         raw_tx_hex,
+         collection_slug,
+         inscription_id,
+         status,
+         created_at_ms,
+         updated_at_ms
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+       ON CONFLICT(txid) DO UPDATE
+       SET raw_tx_hex = excluded.raw_tx_hex,
+           collection_slug = excluded.collection_slug,
+           inscription_id = excluded.inscription_id,
+           status = excluded.status,
+           updated_at_ms = excluded.updated_at_ms`,
+      txid,
+      rawTxHex,
+      collectionSlug,
+      inscriptionId,
+      'pending',
+      now
+    )
+
+    return { tracked: true, txid }
+  }
+
+  async #handleRefresh() {
+    const now = Date.now()
+    await this.#maybeRefresh({ now, force: true })
+
+    const available = this.#availableRows(now)
+    return {
+      refreshed: true,
+      availableCount: available.length,
+      totalAvailable: available.reduce((sum, row) => sum + Number(row.value), 0),
+      tracked: this.#trackedTransactions()
+    }
+  }
+
+  async #maybeRefresh({ now, force }) {
+    const lastRefreshMs = Number(this.#metadataValue('last_refresh_ms') ?? 0)
+    if (!force && now - lastRefreshMs < REFRESH_TTL_MS) return
+
+    const utxos = await Mempool.addressUTXOs(this.wallet.taprootAddress)
+    this.#syncUtxos({ utxos, now })
+    await this.#refreshTrackedTransactions(now)
+    this.#setMetadataValue('last_refresh_ms', String(now))
+  }
+
+  #syncUtxos({ utxos, now }) {
+    const seenOutpoints = new Set()
+
+    for (const utxo of utxos) {
+      const outpoint = outpointFor(utxo)
+      seenOutpoints.add(outpoint)
+
+      this.sql.exec(
+        `INSERT INTO funding_utxos (
+           outpoint,
+           txid,
+           vout,
+           value,
+           confirmed,
+           updated_at_ms
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(outpoint) DO UPDATE
+         SET txid = excluded.txid,
+             vout = excluded.vout,
+             value = excluded.value,
+             confirmed = excluded.confirmed,
+             updated_at_ms = excluded.updated_at_ms`,
+        outpoint,
+        utxo.txid,
+        Number(utxo.vout),
+        Number(utxo.value),
+        utxo.status?.confirmed ? 1 : 0,
+        now
+      )
+    }
+
+    const existing = this.sql.exec('SELECT outpoint FROM funding_utxos').toArray()
+    for (const row of existing) {
+      if (seenOutpoints.has(row.outpoint)) continue
+      this.sql.exec('DELETE FROM funding_utxos WHERE outpoint = ?1', row.outpoint)
+    }
+
+    this.#releaseExpiredReservations(now)
+  }
+
+  async #refreshTrackedTransactions(now) {
+    const tracked = this.sql
+      .exec(
+        `SELECT txid
+         FROM tracked_transactions
+         WHERE status = 'pending'
+         ORDER BY created_at_ms DESC
+         LIMIT 50`
+      )
+      .toArray()
+
+    for (const row of tracked) {
+      try {
+        const tx = await Mempool.tx(row.txid)
+        if (!tx?.status?.confirmed) continue
+
+        this.sql.exec(
+          `UPDATE tracked_transactions
+           SET status = 'confirmed',
+               updated_at_ms = ?2
+           WHERE txid = ?1`,
+          row.txid,
+          now
+        )
+      } catch {
+        // Leave pending; the D1 order cron handles rebroadcast and failure states.
+      }
+    }
+  }
+
+  #availableRows(now) {
+    return this.sql
+      .exec(
+        `SELECT outpoint, txid, vout, value, confirmed
+         FROM funding_utxos
+         WHERE confirmed = 1
+           AND (reserved_until_ms IS NULL OR reserved_until_ms <= ?1)
+         ORDER BY value DESC, outpoint ASC`,
+        now
+      )
+      .toArray()
+  }
+
+  #trackedTransactions() {
+    return this.sql
+      .exec(
+        `SELECT txid, collection_slug, inscription_id, status, created_at_ms, updated_at_ms
+         FROM tracked_transactions
+         ORDER BY created_at_ms DESC
+         LIMIT 20`
+      )
+      .toArray()
+  }
+
+  #releaseExpiredReservations(now) {
+    this.sql.exec(
+      `UPDATE funding_utxos
+       SET reserved_by = NULL,
+           reserved_until_ms = NULL,
+           updated_at_ms = ?1
+       WHERE reserved_until_ms IS NOT NULL
+         AND reserved_until_ms <= ?1`,
+      now
+    )
+  }
+
+  #metadataValue(key) {
+    const row = this.sql.exec('SELECT value FROM metadata WHERE key = ?1 LIMIT 1', key).toArray()[0]
+    return row?.value ?? null
+  }
+
+  #setMetadataValue(key, value) {
+    this.sql.exec(
+      `INSERT INTO metadata (key, value)
+       VALUES (?1, ?2)
+       ON CONFLICT(key) DO UPDATE
+       SET value = excluded.value`,
+      key,
+      value
+    )
+  }
+}

@@ -4,7 +4,7 @@ export function isValidInscriptionId(value) {
   return /^[0-9a-f]{64}i\d+$/i.test(value)
 }
 
-export function normalizeOrdinalAddress(value) {
+export function normalizeBitcoinAddress(value) {
   try {
     const decoded = btc.Address().decode(value)
     return btc.Address().encode(decoded)
@@ -12,3 +12,5 @@ export function normalizeOrdinalAddress(value) {
     return null
   }
 }
+
+export const normalizeOrdinalAddress = normalizeBitcoinAddress

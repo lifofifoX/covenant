@@ -18,6 +18,7 @@ import UsdController from './controllers/usd_controller.js'
 import StickyPurchaseController from './controllers/sticky_purchase_controller.js'
 import MintController from './controllers/mint_controller.js'
 import FrameRefreshController from './controllers/frame_refresh_controller.js'
+import BuybackController from './controllers/buyback_controller.js'
 
 application.register('image', ImageController)
 application.register('body-class', BodyClassController)
@@ -28,6 +29,7 @@ application.register('usd', UsdController)
 application.register('sticky-purchase', StickyPurchaseController)
 application.register('mint', MintController)
 application.register('frame-refresh', FrameRefreshController)
+application.register('buyback', BuybackController)
 
 window.CURRENCY_FORMATTER = new Intl.NumberFormat("en-US", {
   style: "currency",

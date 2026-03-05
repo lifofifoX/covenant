@@ -1,0 +1,98 @@
+<section
+  data-testid="buying-collection-page"
+  data-controller="buyback"
+  data-action="wallet:connected@window->buyback#onWalletConnected wallet:disconnected@window->buyback#onWalletDisconnected"
+  data-buyback-collection-value="<%= buy.slug %>"
+  data-buyback-price-value="<%= buy.priceSats %>"
+>
+  <% const bannerId = collection.gallery_inscription_id ?? collection.parent_inscription_id ?? (collection.inscription_ids ?? [])[0] %>
+
+  <div class="collection-header">
+    <h1 class="collection-title"><%= buy.title %></h1>
+    <p style="opacity: 0.8; margin-bottom: 1rem; max-width: 60ch;">
+      Posted bid: <strong><%= formatSats(buy.priceSats) %></strong> per eligible inscription. Sold items are delivered to the destination wallet configured for this policy.
+    </p>
+
+    <% if (collection.gallery_inscription_id || collection.parent_inscription_id) { %>
+      <div style="margin-top: 16px;">
+        <a
+          href="https://ordinals.com/inscription/<%= encodeURIComponent(bannerId) %>"
+          target="_blank"
+          rel="noopener"
+          style="font-size: 0.75rem; color: var(--color-warning-bg);"
+        >View provenance on ordinals.com ◉</a>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="detail-layout">
+    <div class="detail-media" data-controller="image">
+      <div class="media-frame" data-label="Target Collection">
+        <div style="position: absolute; inset: 0; background: linear-gradient(45deg, #e0e0e0, #f0f0f0);" data-image-target="skeleton"></div>
+        <% if (parentInscription && parentInscription.isImage) { %>
+          <img
+            src="https://ordinals.com/content/<%= encodeURIComponent(bannerId) %>"
+            alt="<%= buy.title %>"
+            loading="eager"
+            decoding="async"
+            style="image-rendering: pixelated"
+            class="opacity-0 transition-opacity duration-300"
+            data-image-target="img"
+            data-action="load->image#loaded error->image#error"
+          />
+        <% } else { %>
+          <iframe
+            src="https://ordinals.com/preview/<%= encodeURIComponent(bannerId) %>"
+            class="pointer-events-none opacity-0 transition-opacity duration-300"
+            loading="eager"
+            allow="accelerometer; gyroscope"
+            data-image-target="media"
+            data-action="load->image#loaded error->image#error"
+          ></iframe>
+        <% } %>
+      </div>
+    </div>
+
+    <div>
+      <div class="purchase-section" style="margin-bottom: 1.5rem;">
+        <div class="price-row">
+          <span class="price-label">Bid</span>
+          <span class="price-value"><%= formatSats(buy.priceSats) %></span>
+        </div>
+
+        <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--color-secondary);">
+          <div>Destination</div>
+          <div style="margin-top: 0.35rem; font-family: var(--font-mono); word-break: break-all;"><%= buy.destinationAddress %></div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <button class="btn btn-primary btn-block hide-on-connected" type="button" data-action="wallet#select">Connect Wallet to Check Eligibility</button>
+          <div class="show-on-connected" style="font-size: 0.8rem; color: var(--color-secondary); text-transform: uppercase; letter-spacing: 0.04em;">Connected wallet inventory updates below.</div>
+        </div>
+      </div>
+
+      <div class="hidden message message-success" data-buyback-target="successPanel">
+        <div class="message-title">Bid Accepted</div>
+        <a class="message-link" target="_blank" rel="noopener" data-buyback-target="successLink" href="">View on mempool.space</a>
+      </div>
+
+      <div class="hidden message message-error" data-buyback-target="errorPanel">
+        <div class="message-title">Error</div>
+        <div class="message-link" data-buyback-target="errorMessage"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cut-line" style="margin-top: 2rem;"><span>[ ELIGIBLE INVENTORY ]</span></div>
+
+  <div data-buyback-target="loading" class="empty-state hidden">Scanning connected wallet for eligible inscriptions…</div>
+  <div data-buyback-target="empty" class="empty-state">Connect a wallet to inspect eligible inscriptions.</div>
+  <div data-buyback-target="inventory" class="collections-grid" style="margin-top: 1.5rem;"></div>
+
+  <turbo-frame
+    id="buying-activity"
+    src="/buying/<%= encodeURIComponent(buy.slug) %>/activity"
+    loading="lazy"
+    style="display: block; margin-top: 2rem;"
+  ></turbo-frame>
+</section>
