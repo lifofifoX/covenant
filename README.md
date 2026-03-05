@@ -30,6 +30,8 @@ npm run dev:buy-agent
 npm run dev
 ```
 
+`SELLING_WALLET_PRIVATE_KEY` and `FUNDING_WALLET_PRIVATE_KEY` accept either 32-byte hex or mainnet WIF.
+
 Optional (second terminal):
 
 ```bash

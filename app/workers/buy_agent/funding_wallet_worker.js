@@ -43,6 +43,7 @@ export class FundingWalletWorker {
           outpoint TEXT PRIMARY KEY,
           txid TEXT NOT NULL,
           vout INTEGER NOT NULL,
+          address TEXT,
           value INTEGER NOT NULL,
           confirmed INTEGER NOT NULL,
           reserved_by TEXT,
@@ -67,6 +68,10 @@ export class FundingWalletWorker {
           value TEXT NOT NULL
         );
       `)
+
+      try {
+        this.sql.exec('ALTER TABLE funding_utxos ADD COLUMN address TEXT')
+      } catch {}
     })
   }
 
@@ -75,7 +80,12 @@ export class FundingWalletWorker {
       const url = new URL(request.url)
 
       if (request.method === 'GET' && url.pathname === '/address') {
-        return json({ fundingAddress: this.wallet.taprootAddress })
+        return json({
+          fundingAddress: this.wallet.changeAddress,
+          fundingAddresses: this.wallet.fundingAddresses,
+          nativeSegwitAddress: this.wallet.nativeSegwitAddress,
+          taprootAddress: this.wallet.taprootAddress
+        })
       }
 
       if (request.method === 'POST' && url.pathname === '/available') {
@@ -121,13 +131,15 @@ export class FundingWalletWorker {
       outpoint: row.outpoint,
       txid: row.txid,
       vout: Number(row.vout),
+      address: row.address,
       value: Number(row.value),
       confirmed: Boolean(row.confirmed)
     }))
     const totalAvailable = utxos.reduce((sum, utxo) => sum + utxo.value, 0)
 
     return {
-      fundingAddress: this.wallet.taprootAddress,
+      fundingAddress: this.wallet.changeAddress,
+      fundingAddresses: this.wallet.fundingAddresses,
       utxos,
       totalAvailable,
       tracked: this.#trackedTransactions()
@@ -281,43 +293,54 @@ export class FundingWalletWorker {
 
   async #maybeRefresh({ now, force }) {
     const lastRefreshMs = Number(this.#metadataValue('last_refresh_ms') ?? 0)
-    if (!force && now - lastRefreshMs < REFRESH_TTL_MS) return
+    const hasLegacyRows = this.sql.exec('SELECT 1 FROM funding_utxos WHERE address IS NULL LIMIT 1').toArray().length > 0
+    if (!force && !hasLegacyRows && now - lastRefreshMs < REFRESH_TTL_MS) return
 
-    const utxos = await Mempool.addressUTXOs(this.wallet.taprootAddress)
-    this.#syncUtxos({ utxos, now })
+    const utxoResponses = await Promise.all(
+      this.wallet.fundingAddresses.map(async (address) => ({
+        address,
+        utxos: await Mempool.addressUTXOs(address)
+      }))
+    )
+    this.#syncUtxos({ utxoResponses, now })
     await this.#refreshTrackedTransactions(now)
     this.#setMetadataValue('last_refresh_ms', String(now))
   }
 
-  #syncUtxos({ utxos, now }) {
+  #syncUtxos({ utxoResponses, now }) {
     const seenOutpoints = new Set()
 
-    for (const utxo of utxos) {
-      const outpoint = outpointFor(utxo)
-      seenOutpoints.add(outpoint)
+    for (const { address, utxos } of utxoResponses) {
+      for (const utxo of utxos) {
+        const outpoint = outpointFor(utxo)
+        seenOutpoints.add(outpoint)
 
-      this.sql.exec(
-        `INSERT INTO funding_utxos (
-           outpoint,
-           txid,
-           vout,
-           value,
-           confirmed,
-           updated_at_ms
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-         ON CONFLICT(outpoint) DO UPDATE
-         SET txid = excluded.txid,
-             vout = excluded.vout,
-             value = excluded.value,
-             confirmed = excluded.confirmed,
-             updated_at_ms = excluded.updated_at_ms`,
-        outpoint,
-        utxo.txid,
-        Number(utxo.vout),
-        Number(utxo.value),
-        utxo.status?.confirmed ? 1 : 0,
-        now
-      )
+        this.sql.exec(
+          `INSERT INTO funding_utxos (
+             outpoint,
+             txid,
+             vout,
+             address,
+             value,
+             confirmed,
+             updated_at_ms
+           ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+           ON CONFLICT(outpoint) DO UPDATE
+           SET txid = excluded.txid,
+               vout = excluded.vout,
+               address = excluded.address,
+               value = excluded.value,
+               confirmed = excluded.confirmed,
+               updated_at_ms = excluded.updated_at_ms`,
+          outpoint,
+          utxo.txid,
+          Number(utxo.vout),
+          address,
+          Number(utxo.value),
+          utxo.status?.confirmed ? 1 : 0,
+          now
+        )
+      }
     }
 
     const existing = this.sql.exec('SELECT outpoint FROM funding_utxos').toArray()
@@ -362,7 +385,7 @@ export class FundingWalletWorker {
   #availableRows(now) {
     return this.sql
       .exec(
-        `SELECT outpoint, txid, vout, value, confirmed
+        `SELECT outpoint, txid, vout, address, value, confirmed
          FROM funding_utxos
          WHERE confirmed = 1
            AND (reserved_until_ms IS NULL OR reserved_until_ms <= ?1)

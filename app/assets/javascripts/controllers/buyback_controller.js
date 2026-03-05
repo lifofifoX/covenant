@@ -70,6 +70,7 @@ export default class extends Controller {
         body: JSON.stringify({
           inscriptionId,
           sellerOrdinalAddress: Wallet.ordinalAddress.address,
+          sellerOrdinalPublicKey: Wallet.ordinalAddress.publicKey,
           sellerPaymentAddress: Wallet.paymentAddress.address
         })
       })

@@ -65,6 +65,24 @@ function parsePsbt(signedPsbt) {
   }
 }
 
+function isTaprootAddress(address) {
+  return String(address).startsWith('bc1p')
+}
+
+function parseTaprootPublicKey(value, label) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new HttpError(400, `Missing ${label}`)
+  }
+
+  try {
+    const bytes = hex.decode(value.trim())
+    if (bytes.length !== 32) throw new Error('Wrong length')
+    return bytes
+  } catch {
+    throw new HttpError(400, `Invalid ${label}`)
+  }
+}
+
 export class BuyPolicyWorker {
   constructor(state, env) {
     this.state = state
@@ -115,13 +133,16 @@ export class BuyPolicyWorker {
     }
   }
 
-  async #prepareTrade({ collectionSlug, inscriptionId, sellerOrdinalAddress, sellerPaymentAddress }) {
+  async #prepareTrade({ collectionSlug, inscriptionId, sellerOrdinalAddress, sellerOrdinalPublicKey, sellerPaymentAddress }) {
     if (!collectionSlug) throw new HttpError(400, 'Missing collectionSlug')
     if (!isValidInscriptionId(inscriptionId)) throw new HttpError(400, 'Invalid inscriptionId')
 
     const policy = BuyPolicy.lookup(collectionSlug)
     const normalizedSellerOrdinalAddress = normalizeAddressOrThrow(sellerOrdinalAddress, 'sellerOrdinalAddress')
     const normalizedSellerPaymentAddress = normalizeAddressOrThrow(sellerPaymentAddress, 'sellerPaymentAddress')
+    const sellerOrdinalTaprootKey = isTaprootAddress(normalizedSellerOrdinalAddress)
+      ? parseTaprootPublicKey(sellerOrdinalPublicKey, 'sellerOrdinalPublicKey')
+      : null
 
     const existing = await getActiveBuyOrderForInscription({ db: this.env.DB, inscriptionId })
     if (existing) throw new HttpError(409, 'Inscription already has an active buy', 'already_buying')
@@ -136,7 +157,6 @@ export class BuyPolicyWorker {
     const fundingState = await this.#fundingRequest('/available', { forceRefresh: false })
     const quote = this.#selectFundingUtxos({
       fundingUtxos: fundingState.utxos,
-      fundingAddress: this.fundingWallet.taprootAddress,
       sellerOrdinalAddress: normalizedSellerOrdinalAddress,
       sellerPaymentAddress: normalizedSellerPaymentAddress,
       destinationAddress: policy.destinationAddress,
@@ -156,10 +176,10 @@ export class BuyPolicyWorker {
     try {
       const tx = this.#buildUnsignedTransaction({
         quote,
-        fundingAddress: this.fundingWallet.taprootAddress,
         destinationAddress: policy.destinationAddress,
         sellerPaymentAddress: normalizedSellerPaymentAddress,
         sellerOrdinalAddress: normalizedSellerOrdinalAddress,
+        sellerOrdinalTaprootKey,
         inscription
       })
 
@@ -172,7 +192,8 @@ export class BuyPolicyWorker {
         reservationId,
         sellerOrdinalAddress: normalizedSellerOrdinalAddress,
         sellerPaymentAddress: normalizedSellerPaymentAddress,
-        fundingAddress: this.fundingWallet.taprootAddress,
+        fundingAddresses: this.fundingWallet.fundingAddresses,
+        changeAddress: quote.changeAddress,
         destinationAddress: policy.destinationAddress,
         fundingInputs: quote.selectedUtxos,
         feeRate,
@@ -266,7 +287,10 @@ export class BuyPolicyWorker {
 
       for (let index = 0; index < details.fundingInputs.length; index++) {
         const txIndex = FUNDING_INPUT_START_INDEX + index
-        tx.updateInput(txIndex, { tapInternalKey: this.fundingWallet.tapInternalKey })
+        const fundingInput = details.fundingInputs[index]
+        if (isTaprootAddress(fundingInput.address)) {
+          tx.updateInput(txIndex, { tapInternalKey: this.fundingWallet.tapInternalKey })
+        }
         this.fundingWallet.signTxInput(tx, txIndex)
       }
 
@@ -356,7 +380,6 @@ export class BuyPolicyWorker {
 
   #selectFundingUtxos({
     fundingUtxos,
-    fundingAddress,
     sellerOrdinalAddress,
     sellerPaymentAddress,
     destinationAddress,
@@ -371,26 +394,33 @@ export class BuyPolicyWorker {
     txSize += estimateInputSize(sellerOrdinalAddress)
     txSize += estimateOutputSize(destinationAddress)
     txSize += estimateOutputSize(sellerPaymentAddress)
-    txSize += estimateOutputSize(fundingAddress)
 
     const additionalPaddingSats = Math.max(0, 330 - inscriptionValue)
     const baseRequiredSats = priceSats + additionalPaddingSats
 
     const selectedUtxos = []
+    let changeAddress = this.fundingWallet.changeAddress
     let inputValue = 0
     let networkFee = Math.ceil(txSize * feeRate)
     let satsRequired = baseRequiredSats + networkFee
 
     for (const utxo of available) {
+      if (typeof utxo.address !== 'string' || utxo.address.trim() === '') continue
+
       selectedUtxos.push({
         outpoint: utxo.outpoint,
         txid: utxo.txid,
         vout: Number(utxo.vout),
+        address: utxo.address,
         value: Number(utxo.value)
       })
       inputValue += Number(utxo.value)
 
-      txSize += estimateInputSize(fundingAddress)
+      txSize += estimateInputSize(utxo.address)
+      if (selectedUtxos.length === 1) {
+        changeAddress = utxo.address
+        txSize += estimateOutputSize(changeAddress)
+      }
       networkFee = Math.ceil(txSize * feeRate)
       satsRequired = baseRequiredSats + networkFee
 
@@ -407,50 +437,60 @@ export class BuyPolicyWorker {
       networkFee,
       satsRequired,
       changeAmount: inputValue - satsRequired,
+      changeAddress,
       inscriptionOutputAmount: Math.max(inscriptionValue, 330)
     }
   }
 
   #buildUnsignedTransaction({
     quote,
-    fundingAddress,
     destinationAddress,
     sellerPaymentAddress,
     sellerOrdinalAddress,
+    sellerOrdinalTaprootKey,
     inscription
   }) {
     const tx = new btc.Transaction()
 
-    const inscriptionScript = btc.OutScript.encode(btc.Address().decode(sellerOrdinalAddress))
-    tx.addInput({
+    const inscriptionInput = {
       txid: inscription.locationTxid,
       index: inscription.locationVout,
       sequence: 4294967293,
       witnessUtxo: {
-        script: inscriptionScript,
+        script: btc.OutScript.encode(btc.Address().decode(sellerOrdinalAddress)),
         amount: amountToBigInt(inscription.value, 'inscription value')
       }
-    })
+    }
 
-    const fundingScript = btc.OutScript.encode(btc.Address().decode(fundingAddress))
+    if (sellerOrdinalTaprootKey) {
+      inscriptionInput.tapInternalKey = sellerOrdinalTaprootKey
+    }
+
+    tx.addInput(inscriptionInput)
+
     for (const utxo of quote.selectedUtxos) {
-      tx.addInput({
+      const input = {
         txid: utxo.txid,
         index: utxo.vout,
         sequence: 4294967293,
-        tapInternalKey: this.fundingWallet.tapInternalKey,
         witnessUtxo: {
-          script: fundingScript,
+          script: btc.OutScript.encode(btc.Address().decode(utxo.address)),
           amount: BigInt(utxo.value)
         }
-      })
+      }
+
+      if (isTaprootAddress(utxo.address)) {
+        input.tapInternalKey = this.fundingWallet.tapInternalKey
+      }
+
+      tx.addInput(input)
     }
 
     tx.addOutputAddress(destinationAddress, BigInt(quote.inscriptionOutputAmount))
     tx.addOutputAddress(sellerPaymentAddress, BigInt(quote.priceSats ?? 0))
 
     if (quote.changeAmount >= Number(PADDING)) {
-      tx.addOutputAddress(fundingAddress, BigInt(quote.changeAmount))
+      tx.addOutputAddress(quote.changeAddress, BigInt(quote.changeAmount))
     }
 
     return tx
@@ -501,7 +541,7 @@ export class BuyPolicyWorker {
       }
 
       const fundingInputAddress = btc.Address().encode(btc.OutScript.decode(input.witnessUtxo.script))
-      if (fundingInputAddress !== details.fundingAddress) {
+      if (fundingInputAddress !== expected.address) {
         throw new HttpError(400, 'Transaction is not eligible for purchase', 'invalid_tx')
       }
     }
@@ -537,7 +577,7 @@ export class BuyPolicyWorker {
       const changeOutput = tx.getOutput(2)
       if (!changeOutput) throw new HttpError(400, 'Transaction is not eligible for purchase', 'invalid_tx')
       const changeAddress = btc.Address().encode(btc.OutScript.decode(changeOutput.script))
-      if (changeAddress !== details.fundingAddress || Number(changeOutput.amount) !== Number(details.changeAmount)) {
+      if (changeAddress !== details.changeAddress || Number(changeOutput.amount) !== Number(details.changeAmount)) {
         throw new HttpError(400, 'Transaction is not eligible for purchase', 'invalid_tx')
       }
     }

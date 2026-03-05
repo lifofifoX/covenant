@@ -36,5 +36,5 @@ buying:
   - slug: cocks-buyback
     title: C.O.C.K.S. BUYBACK
     catalog_slug: cocks
-    price_sats: 2500000
+    price_sats: 500
     destination_address: bc1pyqz80xg3mchfxa5va4d0kwzzpc52jx63ljw4hjw33s7w97p6x58qucrxy6

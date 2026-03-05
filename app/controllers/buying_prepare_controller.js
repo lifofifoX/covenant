@@ -29,6 +29,7 @@ export async function buyingPrepareController(c) {
       collectionSlug: policy.slug,
       inscriptionId: body.inscriptionId,
       sellerOrdinalAddress: body.sellerOrdinalAddress,
+      sellerOrdinalPublicKey: body.sellerOrdinalPublicKey,
       sellerPaymentAddress: body.sellerPaymentAddress
     })
   })
