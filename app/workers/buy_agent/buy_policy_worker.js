@@ -2,7 +2,7 @@ import * as btc from '@scure/btc-signer'
 import { base64, hex } from '@scure/base'
 
 import { BuyPolicy } from '../../models/buy_policy.js'
-import { createBuyOrder, getActiveBuyOrderForInscription } from '../../models/db/buy_orders.js'
+import { createBuyOrder, getActiveBuyOrderForInscription, setBuyOrderStatus } from '../../models/db/buy_orders.js'
 import { OrdinalsAPI } from '../../models/ordinals_api.js'
 import { StoreWallet } from '../../models/store_wallet.js'
 import { buildGalleryIdSet, matchesInscriptionMetadata } from '../../models/policy_matcher.js'
@@ -17,6 +17,7 @@ const PREPARATION_TTL_MS = 60_000
 const MAX_INSCRIPTION_AMOUNT = 10_000n
 const FUNDING_WALLET_NAME = 'funding-wallet'
 const FUNDING_INPUT_START_INDEX = 1
+const CONSUME_RETRY_ATTEMPTS = 3
 
 class HttpError extends Error {
   constructor(status, message, code = null) {
@@ -315,7 +316,7 @@ export class BuyPolicyWorker {
         priceSats: details.priceSats
       })
 
-      await this.#fundingRequest('/consume', {
+      await this.#consumeFundingWithRetry({
         orderId: order.id,
         reservationId: trade.reservation_id,
         txid: tx.id,
@@ -332,6 +333,8 @@ export class BuyPolicyWorker {
       if (broadcast !== true) {
         return { status: 200, data: { ...result, broadcastError: String(broadcast) } }
       }
+
+      await this.#fundingRequest('/broadcasted', { txid: tx.id }).catch(() => {})
 
       return { status: 200, data: result }
     } catch (error) {
@@ -615,6 +618,53 @@ export class BuyPolicyWorker {
     }
 
     return data
+  }
+
+  async #consumeFundingWithRetry(payload) {
+    let lastError = null
+
+    for (let attempt = 0; attempt < CONSUME_RETRY_ATTEMPTS; attempt++) {
+      try {
+        await this.#fundingRequest('/consume', payload)
+        return
+      } catch (error) {
+        lastError = error
+
+        const tracked = await this.#lookupTrackedFundingTransaction(payload.txid).catch(() => null)
+        if (tracked) return
+      }
+    }
+
+    const tracked = await this.#lookupTrackedFundingTransaction(payload.txid).catch(() => null)
+    if (tracked) return
+
+    if (payload.orderId) {
+      await setBuyOrderStatus({
+        db: this.env.DB,
+        id: payload.orderId,
+        status: 'failed',
+        txid: payload.txid
+      }).catch(() => {})
+    }
+
+    throw lastError ?? new Error('Funding wallet consume failed')
+  }
+
+  async #lookupTrackedFundingTransaction(txid) {
+    const id = this.env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
+    const durableObject = this.env.FUNDING_WALLET.get(id)
+
+    const response = await durableObject.fetch(`https://funding-wallet/tracked/${encodeURIComponent(txid)}`, {
+      method: 'GET'
+    })
+
+    if (response.status === 404) return null
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new HttpError(response.status, data?.error ? String(data.error) : 'Funding wallet request failed', data?.code ?? null)
+    }
+
+    return data?.transaction ?? null
   }
 
   async #releaseTrade(trade) {

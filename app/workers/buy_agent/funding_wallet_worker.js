@@ -136,6 +136,16 @@ export class FundingWalletWorker {
         return json(await this.#handleConsume(body))
       }
 
+      if (request.method === 'GET' && url.pathname.startsWith('/tracked/')) {
+        const txid = decodeURIComponent(url.pathname.slice('/tracked/'.length))
+        return json(await this.#handleTracked(txid))
+      }
+
+      if (request.method === 'POST' && url.pathname === '/broadcasted') {
+        const body = await request.json().catch(() => ({}))
+        return json(await this.#handleBroadcasted(body))
+      }
+
       if (request.method === 'POST' && url.pathname === '/refresh') {
         return json(await this.#handleRefresh())
       }
@@ -288,23 +298,23 @@ export class FundingWalletWorker {
          inscription_id,
          status,
          failure_reason,
-         rebroadcast_count,
-         last_seen_at_ms,
-         last_broadcast_at_ms,
-         created_at_ms,
-         updated_at_ms
-       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, 0, NULL, ?7, ?7, ?7)
-       ON CONFLICT(txid) DO UPDATE
-       SET order_id = excluded.order_id,
-           raw_tx_hex = excluded.raw_tx_hex,
-           collection_slug = excluded.collection_slug,
-           inscription_id = excluded.inscription_id,
-           status = excluded.status,
-           failure_reason = excluded.failure_reason,
-           rebroadcast_count = excluded.rebroadcast_count,
-           last_seen_at_ms = excluded.last_seen_at_ms,
-           last_broadcast_at_ms = excluded.last_broadcast_at_ms,
-           updated_at_ms = excluded.updated_at_ms`,
+       rebroadcast_count,
+       last_seen_at_ms,
+       last_broadcast_at_ms,
+       created_at_ms,
+       updated_at_ms
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, 0, NULL, NULL, ?7, ?7)
+      ON CONFLICT(txid) DO UPDATE
+      SET order_id = excluded.order_id,
+          raw_tx_hex = excluded.raw_tx_hex,
+          collection_slug = excluded.collection_slug,
+          inscription_id = excluded.inscription_id,
+          status = excluded.status,
+          failure_reason = excluded.failure_reason,
+          rebroadcast_count = excluded.rebroadcast_count,
+          last_seen_at_ms = excluded.last_seen_at_ms,
+          last_broadcast_at_ms = COALESCE(tracked_transactions.last_broadcast_at_ms, excluded.last_broadcast_at_ms),
+          updated_at_ms = excluded.updated_at_ms`,
       txid,
       typeof orderId === 'string' && orderId.trim() !== '' ? orderId.trim() : null,
       rawTxHex,
@@ -315,6 +325,59 @@ export class FundingWalletWorker {
     )
 
     return { tracked: true, txid }
+  }
+
+  async #handleTracked(txid) {
+    if (typeof txid !== 'string' || txid.trim() === '') {
+      throw new HttpError(400, 'Missing txid')
+    }
+
+    const row = this.sql
+      .exec(
+        `SELECT txid,
+                order_id,
+                collection_slug,
+                inscription_id,
+                status,
+                failure_reason,
+                rebroadcast_count,
+                last_seen_at_ms,
+                last_broadcast_at_ms,
+                created_at_ms,
+                updated_at_ms
+         FROM tracked_transactions
+         WHERE txid = ?1
+         LIMIT 1`,
+        txid.trim()
+      )
+      .toArray()[0]
+
+    if (!row) throw new HttpError(404, 'Tracked transaction not found', 'tracked_missing')
+
+    return { tracked: true, transaction: row }
+  }
+
+  async #handleBroadcasted({ txid }) {
+    if (typeof txid !== 'string' || txid.trim() === '') {
+      throw new HttpError(400, 'Missing txid')
+    }
+
+    const now = Date.now()
+    const row = this.sql.exec('SELECT txid FROM tracked_transactions WHERE txid = ?1 LIMIT 1', txid.trim()).toArray()[0]
+    if (!row) throw new HttpError(404, 'Tracked transaction not found', 'tracked_missing')
+
+    this.sql.exec(
+      `UPDATE tracked_transactions
+       SET status = CASE WHEN status = 'confirmed' THEN status ELSE 'pending' END,
+           failure_reason = NULL,
+           last_broadcast_at_ms = ?2,
+           updated_at_ms = ?2
+       WHERE txid = ?1`,
+      txid.trim(),
+      now
+    )
+
+    return { tracked: true, txid: txid.trim(), broadcasted: true }
   }
 
   async #handleRefresh() {
@@ -530,29 +593,31 @@ export class FundingWalletWorker {
   }
 
   async #markTrackedTransactionConfirmed(row, now) {
+    await this.#syncBuyOrderStatus(row, 'confirmed')
     row.status = 'confirmed'
     row.failure_reason = null
     row.last_seen_at_ms = now
     row.updated_at_ms = now
     this.#writeTrackedTransaction(row)
-    await this.#syncBuyOrderStatus(row, 'confirmed')
   }
 
   async #markTrackedTransactionFailed(row, now, failureReason) {
+    await this.#syncBuyOrderStatus(row, 'failed')
     row.status = 'failed'
     row.failure_reason = failureReason
     row.updated_at_ms = now
     this.#writeTrackedTransaction(row)
-    await this.#syncBuyOrderStatus(row, 'failed')
   }
 
   async #syncBuyOrderStatus(row, status) {
     if (row.order_id) {
-      await setBuyOrderStatus({ db: this.env.DB, id: row.order_id, status, txid: row.txid })
+      const order = await setBuyOrderStatus({ db: this.env.DB, id: row.order_id, status, txid: row.txid })
+      if (!order) throw new Error(`Buy order not found for tracked transaction ${row.txid}`)
       return
     }
 
-    await setBuyOrderStatusByTxid({ db: this.env.DB, txid: row.txid, status })
+    const order = await setBuyOrderStatusByTxid({ db: this.env.DB, txid: row.txid, status })
+    if (!order) throw new Error(`Buy order not found for tracked transaction ${row.txid}`)
   }
 
   #releaseExpiredReservations(now) {
