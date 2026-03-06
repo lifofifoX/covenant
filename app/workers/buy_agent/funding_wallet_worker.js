@@ -1,11 +1,14 @@
 import { Mempool } from '../../models/mempool.js'
-import { setBuyOrderStatus, setBuyOrderStatusByTxid } from '../../models/db/buy_orders.js'
+import { listPendingBuyOrdersPage, setBuyOrderStatus, setBuyOrderStatusByTxid } from '../../models/db/buy_orders.js'
 import { StoreWallet } from '../../models/store_wallet.js'
 import { safeErrorMessage } from '../../utils/logging.js'
 
 const REFRESH_TTL_MS = 15_000
+const RECOVERY_TTL_MS = 60_000
 const DEFAULT_RESERVATION_TTL_MS = 60_000
 const REBROADCAST_BACKOFF_MS = 30_000
+const RECOVERY_BATCH_SIZE = 200
+const RECOVERY_MAX_ORDERS = 5000
 const TRACKED_RECONCILIATION_LIMIT = 50
 
 class HttpError extends Error {
@@ -36,6 +39,12 @@ function outpointFor(utxo) {
 function statusCodeForBroadcastResult(result) {
   const match = String(result ?? '').match(/^HTTP\s+(\d{3})\b/)
   return match ? Number(match[1]) : null
+}
+
+function timestampSecondsToMs(value, fallbackMs) {
+  const timestamp = Number(value)
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return fallbackMs
+  return timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp
 }
 
 export class FundingWalletWorker {
@@ -405,6 +414,7 @@ export class FundingWalletWorker {
       }))
     )
     this.#syncUtxos({ utxoResponses, now })
+    await this.#maybeRecoverTrackedTransactionsFromOrders({ now, force })
     await this.#reconcileTrackedTransactions(now)
     this.#setMetadataValue('last_refresh_ms', String(now))
   }
@@ -452,6 +462,31 @@ export class FundingWalletWorker {
     }
 
     this.#releaseExpiredReservations(now)
+  }
+
+  async #maybeRecoverTrackedTransactionsFromOrders({ now, force }) {
+    const lastRecoveryMs = Number(this.#metadataValue('last_recovery_ms') ?? 0)
+    if (!force && now - lastRecoveryMs < RECOVERY_TTL_MS) return
+
+    let offset = 0
+    let processed = 0
+
+    while (processed < RECOVERY_MAX_ORDERS) {
+      const remaining = RECOVERY_MAX_ORDERS - processed
+      const limit = Math.min(RECOVERY_BATCH_SIZE, remaining)
+      const orders = await listPendingBuyOrdersPage({ db: this.env.DB, limit, offset })
+      if (orders.length === 0) break
+
+      for (const order of orders) {
+        this.#upsertTrackedTransactionFromOrder(order, now)
+      }
+
+      processed += orders.length
+      offset += orders.length
+      if (orders.length < limit) break
+    }
+
+    this.#setMetadataValue('last_recovery_ms', String(now))
   }
 
   async #reconcileTrackedTransactions(now) {
@@ -562,6 +597,43 @@ export class FundingWalletWorker {
          LIMIT 20`
       )
       .toArray()
+  }
+
+  #upsertTrackedTransactionFromOrder(order, now) {
+    if (!order?.id || !order?.txid || !order?.signed_tx) return
+
+    const createdAtMs = timestampSecondsToMs(order.created_at, now)
+    const updatedAtMs = timestampSecondsToMs(order.updated_at, now)
+
+    this.sql.exec(
+      `INSERT INTO tracked_transactions (
+         txid,
+         order_id,
+         raw_tx_hex,
+         collection_slug,
+         inscription_id,
+         status,
+         failure_reason,
+         rebroadcast_count,
+         last_seen_at_ms,
+         last_broadcast_at_ms,
+         created_at_ms,
+         updated_at_ms
+       ) VALUES (?1, ?2, ?3, ?4, ?5, 'pending', NULL, 0, NULL, NULL, ?6, ?7)
+       ON CONFLICT(txid) DO UPDATE
+       SET order_id = COALESCE(tracked_transactions.order_id, excluded.order_id),
+           raw_tx_hex = COALESCE(tracked_transactions.raw_tx_hex, excluded.raw_tx_hex),
+           collection_slug = COALESCE(tracked_transactions.collection_slug, excluded.collection_slug),
+           inscription_id = COALESCE(tracked_transactions.inscription_id, excluded.inscription_id),
+           updated_at_ms = tracked_transactions.updated_at_ms`,
+      String(order.txid),
+      String(order.id),
+      String(order.signed_tx),
+      order.collection_slug ? String(order.collection_slug) : null,
+      order.inscription_id ? String(order.inscription_id) : null,
+      createdAtMs,
+      updatedAtMs
+    )
   }
 
   #writeTrackedTransaction(row) {

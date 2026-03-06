@@ -1,5 +1,6 @@
 import { BuyPolicy } from '../models/buy_policy.js'
 import { readJsonWithLimit } from '../utils/request_body.js'
+import { normalizeOrdinalAddress } from '../utils/validation.js'
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -19,6 +20,20 @@ export async function buyingPrepareController(c) {
   }
 
   const body = await readJsonWithLimit(c.req.raw)
+  const sellerOrdinalAddress = normalizeOrdinalAddress(body.sellerOrdinalAddress)
+  if (!sellerOrdinalAddress) return json({ error: 'Invalid sellerOrdinalAddress' }, 400)
+
+  const ip = c.req.header('cf-connecting-ip') ?? 'unknown'
+  const ipLimit = await c.env.BUYING_PREPARE_IP_LIMITER.limit({
+    key: `buy-prepare-ip:${slug}:${ip}`
+  })
+  if (!ipLimit.success) return json({ error: 'Rate limit exceeded' }, 429)
+
+  const addressLimit = await c.env.BUYING_PREPARE_ADDRESS_LIMITER.limit({
+    key: `buy-prepare:${slug}:${sellerOrdinalAddress}`
+  })
+  if (!addressLimit.success) return json({ error: 'Rate limit exceeded' }, 429)
+
   const id = c.env.BUY_POLICY.idFromName(policy.slug)
   const durableObject = c.env.BUY_POLICY.get(id)
 
@@ -28,7 +43,7 @@ export async function buyingPrepareController(c) {
     body: JSON.stringify({
       collectionSlug: policy.slug,
       inscriptionId: body.inscriptionId,
-      sellerOrdinalAddress: body.sellerOrdinalAddress,
+      sellerOrdinalAddress,
       sellerOrdinalPublicKey: body.sellerOrdinalPublicKey,
       sellerPaymentAddress: body.sellerPaymentAddress
     })

@@ -43,6 +43,21 @@ name = "LAUNCHPAD_IP_LIMITER"
 namespace_id = "3003"
 simple = { limit = 20, period = 10 }
 
+[[ratelimits]]
+name = "BUYING_PREPARE_ADDRESS_LIMITER"
+namespace_id = "3005"
+simple = { limit = 3, period = 60 }
+
+[[ratelimits]]
+name = "BUYING_PREPARE_IP_LIMITER"
+namespace_id = "3007"
+simple = { limit = 12, period = 60 }
+
+[[ratelimits]]
+name = "BUYING_EXECUTE_IP_LIMITER"
+namespace_id = "3009"
+simple = { limit = 20, period = 60 }
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["LaunchpadReservationWorker"]

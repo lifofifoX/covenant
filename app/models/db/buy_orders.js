@@ -110,6 +110,17 @@ export async function listPendingBuyOrders({ db, limit = 200, afterId = null }) 
   return result.results ?? []
 }
 
+export async function listPendingBuyOrdersPage({ db, limit = 200, offset = 0 }) {
+  const result = await withD1Retry(() =>
+    db
+      .prepare('SELECT * FROM buy_orders WHERE status = ?1 ORDER BY created_at DESC, id DESC LIMIT ?2 OFFSET ?3')
+      .bind('pending', limit, offset)
+      .all()
+  )
+
+  return result.results ?? []
+}
+
 export async function setBuyOrderStatus({ db, id, status, txid }) {
   const timestampSeconds = nowSeconds()
   await withD1Retry(() =>
