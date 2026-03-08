@@ -1,0 +1,62 @@
+<section data-testid="buying-home-page">
+  <div class="section-header" style="margin-bottom: 2rem;">
+    <h1 class="section-title">Bid Board</h1>
+    <span class="section-count"><%= (collections ?? []).length %> collection<%= (collections ?? []).length !== 1 ? 's' : '' %></span>
+  </div>
+
+  <p style="margin-bottom: 2rem; max-width: 60ch; color: var(--color-secondary);">
+    These are the collections currently being bid on. Connect a wallet, inspect your eligible inscriptions, and sell directly into the posted on-chain bid.
+  </p>
+
+  <% if ((collections ?? []).length === 0) { %>
+    <div class="empty-state">No buy policies are configured yet.</div>
+  <% } else { %>
+    <div class="collections-grid">
+      <% (collections ?? []).forEach((collection, index) => { %>
+        <a
+          class="collection-card"
+          href="/buying/<%= encodeURIComponent(collection.slug) %>"
+          data-testid="buying-collection-card"
+          data-number="#<%= String(index + 1).padStart(2, '0') %>"
+        >
+          <div class="card-image" data-controller="image">
+            <div style="position: absolute; inset: 0; background: linear-gradient(135deg, #ddd 25%, #eee 50%, #ddd 75%);" data-image-target="skeleton"></div>
+            <% if (collection.thumbnail.isImage) { %>
+              <img
+                src="<%= collection.thumbnail.contentUrl %>"
+                alt="<%= collection.title %>"
+                loading="lazy"
+                decoding="async"
+                style="image-rendering: pixelated"
+                class="opacity-0 transition-opacity duration-300"
+                data-image-target="img"
+                data-action="load->image#loaded error->image#error"
+              />
+            <% } else { %>
+              <iframe
+                src="<%= collection.thumbnail.previewUrl %>"
+                class="pointer-events-none opacity-0 transition-opacity duration-300"
+                loading="lazy"
+                allow="accelerometer; gyroscope"
+                data-image-target="media"
+                data-action="load->image#loaded error->image#error"
+              ></iframe>
+            <% } %>
+          </div>
+          <h3 class="card-title">
+            <%= collection.title %>
+            <% if (collection.hasGallery) { %>
+              <span aria-label="Gallery collection">&#128444;</span>
+            <% } else if (collection.hasParent) { %>
+              <span aria-label="Parent collection">&#129516;</span>
+            <% } %>
+          </h3>
+          <div class="card-meta">
+            <span><%= collection.acquiredCount %> acquired</span>
+            <span class="card-price"><%= formatSats(collection.priceSats) %></span>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</section>

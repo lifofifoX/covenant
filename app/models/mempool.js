@@ -72,6 +72,9 @@ class MempoolClient {
     if (response.ok) return true
 
     const text = await response.text().catch(() => '')
+    if (response.status === 400 && /(already in mempool|txn-already-in-mempool|already confirmed|already known)/i.test(text)) {
+      return true
+    }
     return text ? `HTTP ${response.status}: ${String(text)}` : `HTTP ${response.status}`
   }
 

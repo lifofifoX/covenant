@@ -11,6 +11,12 @@ import { launchpadSalesController } from '../../controllers/launchpad_sales_cont
 import { launchpadProgressController } from '../../controllers/launchpad_progress_controller.js'
 import { runSyncCollectionsCron } from '../../crons/sync_collections_cron.js'
 import { runOrdersCron } from '../../crons/orders_cron.js'
+import { buyingHomeController } from '../../controllers/buying_home_controller.js'
+import { buyingCollectionController } from '../../controllers/buying_collection_controller.js'
+import { buyingEligibleController } from '../../controllers/buying_eligible_controller.js'
+import { buyingPrepareController } from '../../controllers/buying_prepare_controller.js'
+import { buyingExecuteController } from '../../controllers/buying_execute_controller.js'
+import { buyingActivityController } from '../../controllers/buying_activity_controller.js'
 
 export { LaunchpadReservationWorker } from '../launchpad/worker.js'
 
@@ -24,6 +30,12 @@ app.onError((err, c) => {
 app.get('/', homeController)
 app.get('/policy', policyController)
 app.get('/activity', activityController)
+app.get('/buying', buyingHomeController)
+app.get('/buying/:collection', buyingCollectionController)
+app.get('/buying/:slug/eligible', buyingEligibleController)
+app.get('/buying/:slug/activity', buyingActivityController)
+app.post('/buying/:slug/prepare', buyingPrepareController)
+app.post('/buying/:slug/execute', buyingExecuteController)
 app.post('/sell/:slug', executeSellController)
 app.post('/launchpad/:slug/reserve', launchpadReserveController)
 app.post('/launchpad/:slug/mint', launchpadMintController)
@@ -36,6 +48,9 @@ export default {
   fetch: app.fetch,
   scheduled: (event, env, ctx) => {
     switch (event?.cron) {
+      case '*/1 * * * *':
+        ctx.waitUntil(refreshFundingWallet(env))
+        return
       case '*/5 * * * *':
         runOrdersCron(event, env, ctx)
         return
@@ -45,7 +60,20 @@ export default {
       default:
         runOrdersCron(event, env, ctx)
         runSyncCollectionsCron(event, env, ctx)
+        ctx.waitUntil(refreshFundingWallet(env))
         return
     }
+  }
+}
+
+async function refreshFundingWallet(env) {
+  if (!env.FUNDING_WALLET) return
+
+  try {
+    const id = env.FUNDING_WALLET.idFromName('funding-wallet')
+    const durableObject = env.FUNDING_WALLET.get(id)
+    await durableObject.fetch('https://funding-wallet/refresh', { method: 'POST' })
+  } catch (error) {
+    console.error('refreshFundingWallet failed', error?.message ? String(error.message) : String(error))
   }
 }

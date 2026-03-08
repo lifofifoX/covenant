@@ -19,7 +19,7 @@ selling:
       - 0170e1cdd8993da19d791fd1378841a6e981e7754108a069cc943b0e41a36958i0
   - slug: nakamoto-archives
     title: NAKAMOTO ARCHIVES
-    gallery_inscription_id: 83683a0a2e91beb6d37953df5a768028b987d5006fab1237931f6e30b344aebci0
+    catalog_slug: na-art
     price_sats: 5000000
     payment_address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
     optional_payments:
@@ -31,3 +31,15 @@ selling:
         description: We need to keep the kids happy
         amount: 2222
         address: bc1qhyqkrnru2agaxf36acg3rdzmjtd2fr8nqt6duh
+
+buying:
+  - slug: cocks-buyback
+    title: C.O.C.K.S. BUYBACK
+    catalog_slug: cocks
+    price_sats: 500
+    destination_address: bc1pyqz80xg3mchfxa5va4d0kwzzpc52jx63ljw4hjw33s7w97p6x58qucrxy6
+  - slug: nakamoto-archives-buyback
+    title: NAKAMOTO ARCHIVES BUYBACK
+    catalog_slug: na-art
+    price_sats: 500
+    destination_address: bc1pyqz80xg3mchfxa5va4d0kwzzpc52jx63ljw4hjw33s7w97p6x58qucrxy6

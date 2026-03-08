@@ -46,6 +46,7 @@
 .dev.vars
 .dev.vars.app
 .dev.vars.signing-agent
+.dev.vars.buy-agent
 
 dist/
 generated/
