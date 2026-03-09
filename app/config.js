@@ -1,11 +1,6 @@
 import { parse } from 'yaml'
 import storeYaml from '../config/store.yml'
 import policyYaml from '../config/policy.yml'
-import {
-  lookupCatalogCollection,
-  lookupCatalogCollectionBySelector,
-  selectorsFromCatalogCollection
-} from './models/collections_catalog.js'
 
 function ensureObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -25,74 +20,11 @@ function ensurePositiveInteger(value, label) {
   }
 }
 
-function hasDirectCollectionSelectors(collection) {
-  return (
-    (typeof collection.parent_inscription_id === 'string' && collection.parent_inscription_id.trim() !== '') ||
-    (typeof collection.gallery_inscription_id === 'string' && collection.gallery_inscription_id.trim() !== '') ||
-    (Array.isArray(collection.inscription_ids) && collection.inscription_ids.length > 0)
-  )
-}
-
-function normalizeCollectionPolicy(collection, label) {
-  ensureObject(collection, label)
-
-  if (collection.catalog_slug === undefined) {
-    return collection
-  }
-
-  ensureNonEmptyString(collection.catalog_slug, `${label}.catalog_slug`)
-
-  if (hasDirectCollectionSelectors(collection)) {
-    throw new Error(
-      `Invalid ${label}: cannot combine catalog_slug with parent_inscription_id, gallery_inscription_id, or inscription_ids`
-    )
-  }
-
-  const catalogCollection = lookupCatalogCollection(collection.catalog_slug)
-  return {
-    ...collection,
-    slug: collection.slug ?? catalogCollection.slug,
-    title: collection.title ?? catalogCollection.name,
-    ...selectorsFromCatalogCollection(catalogCollection)
-  }
-}
-
-function normalizePolicy(policy) {
-  ensureObject(policy, 'config/policy.yml')
-
-  const normalizedSelling = Array.isArray(policy.selling)
-    ? policy.selling.map((collection, idx) => normalizeCollectionPolicy(collection, `config/policy.yml: selling[${idx}]`))
-    : policy.selling
-
-  const normalizedLaunchpadCollections = Array.isArray(policy.launchpad?.collections)
-    ? policy.launchpad.collections.map((collection, idx) =>
-        normalizeCollectionPolicy(collection, `config/policy.yml: launchpad.collections[${idx}]`)
-      )
-    : policy.launchpad?.collections
-
-  const normalizedBuying = Array.isArray(policy.buying)
-    ? policy.buying.map((collection, idx) => normalizeCollectionPolicy(collection, `config/policy.yml: buying[${idx}]`))
-    : policy.buying
-
-  return {
-    ...policy,
-    selling: normalizedSelling,
-    launchpad: policy.launchpad
-      ? {
-          ...policy.launchpad,
-          collections: normalizedLaunchpadCollections
-        }
-      : policy.launchpad,
-    buying: normalizedBuying
-  }
-}
-
 function validateCollectionPolicy({
   collection,
   label,
   requireMinPostage,
-  requireDestinationAddress = false,
-  preferCatalogSlug = false
+  requireDestinationAddress = false
 }) {
   ensureObject(collection, label)
   ensureNonEmptyString(collection.slug, `${label}.slug`)
@@ -116,19 +48,6 @@ function validateCollectionPolicy({
     throw new Error(
       `Invalid ${label}: must set either parent_inscription_id, gallery_inscription_id, or inscription_ids`
     )
-  }
-
-  if (preferCatalogSlug && collection.catalog_slug === undefined && !hasIds && hasParent !== hasGallery) {
-    const catalogMatch = lookupCatalogCollectionBySelector({
-      parentInscriptionId: hasParent ? collection.parent_inscription_id : null,
-      galleryInscriptionId: hasGallery ? collection.gallery_inscription_id : null
-    })
-
-    if (catalogMatch) {
-      throw new Error(
-        `Invalid ${label}: matches catalog collection '${catalogMatch.slug}'; use catalog_slug: ${catalogMatch.slug}`
-      )
-    }
   }
 
   if (collection.optional_payments !== undefined) {
@@ -177,8 +96,7 @@ function validatePolicy(policy) {
     validateCollectionPolicy({
       collection: c,
       label: `config/policy.yml: selling[${idx}]`,
-      requireMinPostage: false,
-      preferCatalogSlug: true
+      requireMinPostage: false
     })
   }
 
@@ -199,8 +117,7 @@ function validatePolicy(policy) {
       collection: c,
       label: `config/policy.yml: buying[${idx}]`,
       requireMinPostage: false,
-      requireDestinationAddress: true,
-      preferCatalogSlug: true
+      requireDestinationAddress: true
     })
   }
 
@@ -214,7 +131,7 @@ function validatePolicy(policy) {
 }
 
 export const CONFIG = parse(storeYaml)
-export const POLICY = normalizePolicy(parse(policyYaml))
+export const POLICY = parse(policyYaml)
 
 validateStoreConfig(CONFIG)
 validatePolicy(POLICY)

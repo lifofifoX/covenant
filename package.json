@@ -4,7 +4,6 @@
   "type": "module",
   "scripts": {
     "clean:assets": "node scripts/clean-public.js",
-    "sync:collections": "node scripts/sync-collections.js",
     "build:templates": "node scripts/build-templates.js",
     "build": "esbuild app/assets/javascripts/application.js --bundle --sourcemap --format=esm --outdir=public --public-path=/ --entry-names=[name]-[hash] --metafile=scripts/meta.json --loader:.yml=text --loader:.yaml=text",
     "build:manifest": "node scripts/build-manifest.js",

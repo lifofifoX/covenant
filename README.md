@@ -6,16 +6,8 @@ Be your own inscriptions marketplace
 
 - `config/store.yml`: runtime config (theme, Electrs API URL, artist metadata)
 - `config/policy.yml`: selling, launchpad, and buying policies
-- `config/collections.json`: local copy of the shared collection catalog from `TheWizardsOfOrd/ordinals-collections`
 
-Buy and sell policies should use `catalog_slug` whenever the collection exists in `config/collections.json`.
-Use explicit `parent_inscription_id`, `gallery_inscription_id`, or `inscription_ids` only for true one-off policies that are not in the shared catalog.
-
-Refresh the local catalog with:
-
-```bash
-npm run sync:collections
-```
+Each policy uses explicit selectors in `config/policy.yml`: `parent_inscription_id`, `gallery_inscription_id`, or `inscription_ids`.
 
 ## Local
 
