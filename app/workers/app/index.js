@@ -11,6 +11,7 @@ import { launchpadSalesController } from '../../controllers/launchpad_sales_cont
 import { launchpadProgressController } from '../../controllers/launchpad_progress_controller.js'
 import { runSyncCollectionsCron } from '../../crons/sync_collections_cron.js'
 import { runOrdersCron } from '../../crons/orders_cron.js'
+import { runBuyingMaintenanceCron } from '../../crons/buying_maintenance_cron.js'
 import { buyingHomeController } from '../../controllers/buying_home_controller.js'
 import { buyingCollectionController } from '../../controllers/buying_collection_controller.js'
 import { buyingEligibleController } from '../../controllers/buying_eligible_controller.js'
@@ -49,7 +50,7 @@ export default {
   scheduled: (event, env, ctx) => {
     switch (event?.cron) {
       case '*/1 * * * *':
-        ctx.waitUntil(refreshFundingWallet(env))
+        runBuyingMaintenanceCron(event, env, ctx)
         return
       case '*/5 * * * *':
         runOrdersCron(event, env, ctx)
@@ -60,20 +61,8 @@ export default {
       default:
         runOrdersCron(event, env, ctx)
         runSyncCollectionsCron(event, env, ctx)
-        ctx.waitUntil(refreshFundingWallet(env))
+        runBuyingMaintenanceCron(event, env, ctx)
         return
     }
-  }
-}
-
-async function refreshFundingWallet(env) {
-  if (!env.FUNDING_WALLET) return
-
-  try {
-    const id = env.FUNDING_WALLET.idFromName('funding-wallet')
-    const durableObject = env.FUNDING_WALLET.get(id)
-    await durableObject.fetch('https://funding-wallet/refresh', { method: 'POST' })
-  } catch (error) {
-    console.error('refreshFundingWallet failed', error?.message ? String(error.message) : String(error))
   }
 }

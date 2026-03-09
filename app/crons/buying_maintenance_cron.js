@@ -1,5 +1,8 @@
 import { listPendingBuyOrders, setBuyOrderStatus } from '../models/db/buy_orders.js'
 import { Mempool } from '../models/mempool.js'
+import { safeErrorMessage } from '../utils/logging.js'
+
+const FUNDING_WALLET_NAME = 'funding-wallet'
 
 async function processPendingBuyOrder({ db, order }) {
   try {
@@ -32,7 +35,20 @@ async function processPendingBuyOrder({ db, order }) {
   }
 }
 
-export async function buyOrdersCron({ env }) {
+export async function refreshFundingWalletState(env) {
+  if (!env.FUNDING_WALLET) return
+
+  const id = env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
+  const durableObject = env.FUNDING_WALLET.get(id)
+  const response = await durableObject.fetch('https://funding-wallet/refresh', { method: 'POST' })
+
+  if (response.ok) return
+
+  const data = await response.json().catch(() => ({}))
+  throw new Error(data?.error ? String(data.error) : `Funding wallet refresh failed with status ${response.status}`)
+}
+
+export async function reconcileBuyOrders({ env }) {
   const db = env.DB
 
   const startedAt = Date.now()
@@ -70,6 +86,18 @@ export async function buyOrdersCron({ env }) {
   }
 }
 
-export function runBuyOrdersCron(event, env, ctx) {
-  ctx.waitUntil(buyOrdersCron({ env }))
+export async function buyingMaintenanceCron({ env }) {
+  const results = await Promise.allSettled([refreshFundingWalletState(env), reconcileBuyOrders({ env })])
+
+  if (results[0].status === 'rejected') {
+    console.error('refreshFundingWalletState failed', safeErrorMessage(results[0].reason))
+  }
+
+  if (results[1].status === 'rejected') {
+    console.error('reconcileBuyOrders failed', safeErrorMessage(results[1].reason))
+  }
+}
+
+export function runBuyingMaintenanceCron(event, env, ctx) {
+  ctx.waitUntil(buyingMaintenanceCron({ env }))
 }

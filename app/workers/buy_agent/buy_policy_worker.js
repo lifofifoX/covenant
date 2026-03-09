@@ -2,9 +2,8 @@ import * as btc from '@scure/btc-signer'
 import { base64, hex } from '@scure/base'
 
 import { BuyPolicy } from '../../models/buy_policy.js'
-import { createBuyOrder, getActiveBuyOrderForInscription, setBuyOrderStatus } from '../../models/db/buy_orders.js'
+import { getActiveBuyOrderForInscription } from '../../models/db/buy_orders.js'
 import { OrdinalsAPI } from '../../models/ordinals_api.js'
-import { StoreWallet } from '../../models/store_wallet.js'
 import { buildGalleryIdSet, matchesInscriptionMetadata } from '../../models/policy_matcher.js'
 import { Mempool } from '../../models/mempool.js'
 import { safeErrorMessage } from '../../utils/logging.js'
@@ -17,7 +16,6 @@ const PREPARATION_TTL_MS = 60_000
 const MAX_INSCRIPTION_AMOUNT = 10_000n
 const FUNDING_WALLET_NAME = 'funding-wallet'
 const FUNDING_INPUT_START_INDEX = 1
-const CONSUME_RETRY_ATTEMPTS = 3
 
 class HttpError extends Error {
   constructor(status, message, code = null) {
@@ -89,23 +87,9 @@ export class BuyPolicyWorker {
     this.state = state
     this.env = env
     this.sql = state.storage.sql
-    this.fundingWallet = StoreWallet.fromEnv(env, 'FUNDING_WALLET_PRIVATE_KEY')
 
     this.state.blockConcurrencyWhile(async () => {
-      this.sql.exec(`
-        CREATE TABLE IF NOT EXISTS prepared_buys (
-          trade_id TEXT PRIMARY KEY,
-          inscription_id TEXT NOT NULL,
-          reservation_id TEXT NOT NULL,
-          details_json TEXT NOT NULL,
-          expires_at_ms INTEGER NOT NULL,
-          created_at_ms INTEGER NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_prepared_buys_inscription_id
-          ON prepared_buys (inscription_id, expires_at_ms);
-        CREATE INDEX IF NOT EXISTS idx_prepared_buys_expires_at
-          ON prepared_buys (expires_at_ms);
-      `)
+      this.#ensurePreparedBuysSchema()
     })
   }
 
@@ -155,9 +139,10 @@ export class BuyPolicyWorker {
     })
 
     const feeRate = await this.#minimumFeeRate(policy)
-    const fundingState = await this.#fundingRequest('/available', { forceRefresh: false })
+    const fundingState = await this.#fundingRequest('/available', { forceRefresh: true })
     const quote = this.#selectFundingUtxos({
       fundingUtxos: fundingState.utxos,
+      fundingChangeAddress: fundingState.fundingAddress,
       sellerOrdinalAddress: normalizedSellerOrdinalAddress,
       sellerPaymentAddress: normalizedSellerPaymentAddress,
       destinationAddress: policy.destinationAddress,
@@ -166,85 +151,68 @@ export class BuyPolicyWorker {
       feeRate
     })
 
-    const reservationId = createId()
-    await this.#fundingRequest('/reserve', {
-      reservationId,
-      outpoints: quote.selectedUtxos.map((utxo) => utxo.outpoint),
-      ttlMs: PREPARATION_TTL_MS
+    const tx = this.#buildUnsignedTransaction({
+      quote,
+      destinationAddress: policy.destinationAddress,
+      sellerPaymentAddress: normalizedSellerPaymentAddress,
+      sellerOrdinalAddress: normalizedSellerOrdinalAddress,
+      sellerOrdinalTaprootKey,
+      inscription
     })
 
-    let tradeId = null
-    try {
-      const tx = this.#buildUnsignedTransaction({
-        quote,
-        destinationAddress: policy.destinationAddress,
-        sellerPaymentAddress: normalizedSellerPaymentAddress,
-        sellerOrdinalAddress: normalizedSellerOrdinalAddress,
-        sellerOrdinalTaprootKey,
-        inscription
-      })
+    const tradeId = createId()
+    const now = Date.now()
+    const details = {
+      tradeId,
+      collectionSlug,
+      inscriptionId: inscription.id,
+      sellerOrdinalAddress: normalizedSellerOrdinalAddress,
+      sellerPaymentAddress: normalizedSellerPaymentAddress,
+      changeAddress: quote.changeAddress,
+      destinationAddress: policy.destinationAddress,
+      fundingInputs: quote.selectedUtxos,
+      feeRate,
+      priceSats: Number(policy.policy.price_sats),
+      networkFee: quote.networkFee,
+      changeAmount: quote.changeAmount,
+      inscriptionValue: Number(inscription.value),
+      inscriptionOutputAmount: quote.inscriptionOutputAmount,
+      inscriptionTxid: inscription.locationTxid,
+      inscriptionVout: inscription.locationVout,
+      createdAtMs: now,
+      expiresAtMs: now + PREPARATION_TTL_MS
+    }
 
-      tradeId = createId()
-      const now = Date.now()
-      const details = {
+    this.sql.exec(
+      `INSERT INTO prepared_buys (
+         trade_id,
+         inscription_id,
+         details_json,
+         expires_at_ms,
+         created_at_ms
+       ) VALUES (?1, ?2, ?3, ?4, ?5)`,
+      tradeId,
+      inscription.id,
+      JSON.stringify(details),
+      details.expiresAtMs,
+      now
+    )
+
+    return {
+      status: 200,
+      data: {
         tradeId,
-        collectionSlug,
-        inscriptionId: inscription.id,
-        reservationId,
-        sellerOrdinalAddress: normalizedSellerOrdinalAddress,
-        sellerPaymentAddress: normalizedSellerPaymentAddress,
-        fundingAddresses: this.fundingWallet.fundingAddresses,
-        changeAddress: quote.changeAddress,
-        destinationAddress: policy.destinationAddress,
-        fundingInputs: quote.selectedUtxos,
+        psbt: base64.encode(tx.toPSBT()),
         feeRate,
-        priceSats: Number(policy.policy.price_sats),
         networkFee: quote.networkFee,
-        changeAmount: quote.changeAmount,
-        inscriptionValue: Number(inscription.value),
-        inscriptionOutputAmount: quote.inscriptionOutputAmount,
-        inscriptionTxid: inscription.locationTxid,
-        inscriptionVout: inscription.locationVout,
-        createdAtMs: now,
-        expiresAtMs: now + PREPARATION_TTL_MS
-      }
-
-      this.sql.exec(
-        `INSERT INTO prepared_buys (
-           trade_id,
-           inscription_id,
-           reservation_id,
-           details_json,
-           expires_at_ms,
-           created_at_ms
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-        tradeId,
-        inscription.id,
-        reservationId,
-        JSON.stringify(details),
-        details.expiresAtMs,
-        now
-      )
-
-      return {
-        status: 200,
-        data: {
-          tradeId,
-          psbt: base64.encode(tx.toPSBT()),
-          feeRate,
-          networkFee: quote.networkFee,
-          priceSats: Number(policy.policy.price_sats),
-          inscription: {
-            id: inscription.id,
-            number: inscription.number,
-            address: inscription.address,
-            value: inscription.value
-          }
+        priceSats: Number(policy.policy.price_sats),
+        inscription: {
+          id: inscription.id,
+          number: inscription.number,
+          address: inscription.address,
+          value: inscription.value
         }
       }
-    } catch (error) {
-      await this.#fundingRequest('/release', { reservationId }).catch(() => {})
-      throw error
     }
   }
 
@@ -254,7 +222,7 @@ export class BuyPolicyWorker {
 
     const trade = this.sql
       .exec(
-        `SELECT trade_id, reservation_id, details_json, expires_at_ms
+        `SELECT trade_id, details_json, expires_at_ms
          FROM prepared_buys
          WHERE trade_id = ?1
          LIMIT 1`,
@@ -267,7 +235,7 @@ export class BuyPolicyWorker {
     const details = JSON.parse(trade.details_json)
     const now = Date.now()
     if (Number(trade.expires_at_ms) <= now) {
-      await this.#releaseTrade(trade)
+      this.#releaseTrade(trade.trade_id)
       throw new HttpError(409, 'Prepared trade expired', 'trade_expired')
     }
 
@@ -285,60 +253,18 @@ export class BuyPolicyWorker {
       if (active) throw new HttpError(409, 'Inscription already has an active buy', 'already_buying')
 
       this.#validatePreparedTransaction({ tx, details, inscription })
-
-      for (let index = 0; index < details.fundingInputs.length; index++) {
-        const txIndex = FUNDING_INPUT_START_INDEX + index
-        const fundingInput = details.fundingInputs[index]
-        if (isTaprootAddress(fundingInput.address)) {
-          tx.updateInput(txIndex, { tapInternalKey: this.fundingWallet.tapInternalKey })
-        }
-        this.fundingWallet.signTxInput(tx, txIndex)
-      }
-
-      tx.finalize()
-      await this.#validateMempoolAcceptance({ tx, policy })
-
-      const order = await createBuyOrder({
-        db: this.env.DB,
-        collectionSlug: details.collectionSlug,
-        inscriptionId: details.inscriptionId,
-        sellerOrdinalAddress: details.sellerOrdinalAddress,
-        sellerPaymentAddress: details.sellerPaymentAddress,
-        destinationAddress: details.destinationAddress,
-        status: 'pending',
-        txid: tx.id,
-        signedTx: tx.hex,
-        extraDetails: JSON.stringify({
-          funding_inputs: details.fundingInputs,
-          fee_rate: details.feeRate,
-          network_fee: details.networkFee
-        }),
-        priceSats: details.priceSats
+      const minFeeRateSatVb = await this.#minimumFeeRate(policy)
+      const result = await this.#fundingRequest('/commit', {
+        tradeId,
+        signedPsbt,
+        details,
+        minFeeRateSatVb
       })
 
-      await this.#consumeFundingWithRetry({
-        orderId: order.id,
-        reservationId: trade.reservation_id,
-        txid: tx.id,
-        rawTxHex: tx.hex,
-        collectionSlug: details.collectionSlug,
-        inscriptionId: details.inscriptionId,
-        spentOutpoints: details.fundingInputs.map((utxo) => utxo.outpoint)
-      })
-
-      this.sql.exec('DELETE FROM prepared_buys WHERE trade_id = ?1', tradeId)
-
-      const result = { order, created: true }
-      const broadcast = await Mempool.broadcastTx(tx.hex)
-      if (broadcast !== true) {
-        return { status: 200, data: { ...result, broadcastError: String(broadcast) } }
-      }
-
-      await this.#fundingRequest('/broadcasted', { txid: tx.id }).catch(() => {})
-
+      this.#releaseTrade(tradeId)
       return { status: 200, data: result }
     } catch (error) {
-      await this.#releaseTrade(trade)
+      this.#releaseTrade(tradeId)
       throw error
     }
   }
@@ -384,6 +310,7 @@ export class BuyPolicyWorker {
 
   #selectFundingUtxos({
     fundingUtxos,
+    fundingChangeAddress,
     sellerOrdinalAddress,
     sellerPaymentAddress,
     destinationAddress,
@@ -403,7 +330,7 @@ export class BuyPolicyWorker {
     const baseRequiredSats = priceSats + additionalPaddingSats
 
     const selectedUtxos = []
-    let changeAddress = this.fundingWallet.changeAddress
+    let changeAddress = fundingChangeAddress
     let inputValue = 0
     let networkFee = Math.ceil(txSize * feeRate)
     let satsRequired = baseRequiredSats + networkFee
@@ -481,10 +408,6 @@ export class BuyPolicyWorker {
           script: btc.OutScript.encode(btc.Address().decode(utxo.address)),
           amount: BigInt(utxo.value)
         }
-      }
-
-      if (isTaprootAddress(utxo.address)) {
-        input.tapInternalKey = this.fundingWallet.tapInternalKey
       }
 
       tx.addInput(input)
@@ -587,21 +510,6 @@ export class BuyPolicyWorker {
     }
   }
 
-  async #validateMempoolAcceptance({ tx, policy }) {
-    const minFeeRateSatVb = await this.#minimumFeeRate(policy)
-    const mempoolTest = await Mempool.txTest(tx.hex)
-
-    if (!mempoolTest.allowed) {
-      throw new HttpError(400, `Transaction rejected by mempool: ${mempoolTest.rejectReason ?? 'unknown'}`, 'mempool_reject')
-    }
-    if (!mempoolTest.effectiveFeeRateSatVb) {
-      throw new HttpError(400, 'Unable to determine effective fee rate', 'fee_rate_missing')
-    }
-    if (Number(mempoolTest.effectiveFeeRateSatVb) < Number(minFeeRateSatVb)) {
-      throw new HttpError(400, 'Fee rate too low, please prepare again', 'fee_too_low')
-    }
-  }
-
   async #fundingRequest(pathname, body = null) {
     const id = this.env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
     const durableObject = this.env.FUNDING_WALLET.get(id)
@@ -620,71 +528,68 @@ export class BuyPolicyWorker {
     return data
   }
 
-  async #consumeFundingWithRetry(payload) {
-    let lastError = null
-
-    for (let attempt = 0; attempt < CONSUME_RETRY_ATTEMPTS; attempt++) {
-      try {
-        await this.#fundingRequest('/consume', payload)
-        return
-      } catch (error) {
-        lastError = error
-
-        const tracked = await this.#lookupTrackedFundingTransaction(payload.txid).catch(() => null)
-        if (tracked) return
-      }
-    }
-
-    const tracked = await this.#lookupTrackedFundingTransaction(payload.txid).catch(() => null)
-    if (tracked) return
-
-    if (payload.orderId) {
-      await setBuyOrderStatus({
-        db: this.env.DB,
-        id: payload.orderId,
-        status: 'failed',
-        txid: payload.txid
-      }).catch(() => {})
-    }
-
-    throw lastError ?? new Error('Funding wallet consume failed')
-  }
-
-  async #lookupTrackedFundingTransaction(txid) {
-    const id = this.env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
-    const durableObject = this.env.FUNDING_WALLET.get(id)
-
-    const response = await durableObject.fetch(`https://funding-wallet/tracked/${encodeURIComponent(txid)}`, {
-      method: 'GET'
-    })
-
-    if (response.status === 404) return null
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      throw new HttpError(response.status, data?.error ? String(data.error) : 'Funding wallet request failed', data?.code ?? null)
-    }
-
-    return data?.transaction ?? null
-  }
-
-  async #releaseTrade(trade) {
-    this.sql.exec('DELETE FROM prepared_buys WHERE trade_id = ?1', trade.trade_id)
-    await this.#fundingRequest('/release', { reservationId: trade.reservation_id }).catch(() => {})
+  #releaseTrade(tradeId) {
+    this.sql.exec('DELETE FROM prepared_buys WHERE trade_id = ?1', tradeId)
   }
 
   #cleanupExpiredTrades(now) {
-    const expired = this.sql
-      .exec(
-        `SELECT trade_id, reservation_id
-         FROM prepared_buys
-         WHERE expires_at_ms <= ?1`,
-        now
-      )
-      .toArray()
+    this.sql.exec(
+      `DELETE FROM prepared_buys
+       WHERE expires_at_ms <= ?1`,
+      now
+    )
+  }
 
-    for (const trade of expired) {
-      this.sql.exec('DELETE FROM prepared_buys WHERE trade_id = ?1', trade.trade_id)
-      this.#fundingRequest('/release', { reservationId: trade.reservation_id }).catch(() => {})
+  #ensurePreparedBuysSchema() {
+    this.sql.exec(`
+      CREATE TABLE IF NOT EXISTS prepared_buys (
+        trade_id TEXT PRIMARY KEY,
+        inscription_id TEXT NOT NULL,
+        details_json TEXT NOT NULL,
+        expires_at_ms INTEGER NOT NULL,
+        created_at_ms INTEGER NOT NULL
+      )
+    `)
+
+    const columns = this.sql.exec('PRAGMA table_info(prepared_buys)').toArray().map((row) => row.name)
+
+    if (columns.includes('reservation_id')) {
+      this.sql.exec('ALTER TABLE prepared_buys RENAME TO prepared_buys_legacy')
+      this.sql.exec(`
+        CREATE TABLE prepared_buys (
+          trade_id TEXT PRIMARY KEY,
+          inscription_id TEXT NOT NULL,
+          details_json TEXT NOT NULL,
+          expires_at_ms INTEGER NOT NULL,
+          created_at_ms INTEGER NOT NULL
+        )
+      `)
+      this.sql.exec(`
+        INSERT INTO prepared_buys (
+          trade_id,
+          inscription_id,
+          details_json,
+          expires_at_ms,
+          created_at_ms
+        )
+        SELECT
+          trade_id,
+          inscription_id,
+          details_json,
+          expires_at_ms,
+          created_at_ms
+        FROM prepared_buys_legacy
+      `)
+      this.sql.exec('DROP TABLE prepared_buys_legacy')
     }
+
+    this.sql.exec(`
+      CREATE INDEX IF NOT EXISTS idx_prepared_buys_inscription_id
+        ON prepared_buys (inscription_id, expires_at_ms)
+    `)
+    this.sql.exec(`
+      CREATE INDEX IF NOT EXISTS idx_prepared_buys_expires_at
+        ON prepared_buys (expires_at_ms)
+    `)
   }
 }
