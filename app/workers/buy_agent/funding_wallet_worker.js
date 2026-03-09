@@ -1,14 +1,13 @@
 import * as btc from '@scure/btc-signer'
 import { base64 } from '@scure/base'
 
-import { createBuyOrder, listPendingBuyOrders } from '../../models/db/buy_orders.js'
+import { createBuyOrder, listPendingBuyOrderFundingOutpoints } from '../../models/db/buy_orders.js'
 import { Mempool } from '../../models/mempool.js'
 import { StoreWallet } from '../../models/store_wallet.js'
 import { safeErrorMessage } from '../../utils/logging.js'
 
 const REFRESH_TTL_MS = 15_000
 const EXECUTION_CLAIM_TTL_MS = 60_000
-const PENDING_ORDER_BATCH_SIZE = 200
 const PENDING_ORDER_SCAN_LIMIT = 5000
 
 class HttpError extends Error {
@@ -396,36 +395,11 @@ export class FundingWalletWorker {
   }
 
   async #pendingBuyOutpoints() {
-    const outpoints = new Set()
-    let afterId = null
-    let processed = 0
-
-    while (processed < PENDING_ORDER_SCAN_LIMIT) {
-      const remaining = PENDING_ORDER_SCAN_LIMIT - processed
-      const limit = Math.min(PENDING_ORDER_BATCH_SIZE, remaining)
-      const orders = await listPendingBuyOrders({ db: this.env.DB, limit, afterId })
-      if (orders.length === 0) break
-
-      for (const order of orders) {
-        let details = null
-        try {
-          details = JSON.parse(order.extra_details)
-        } catch {}
-
-        const fundingInputs = Array.isArray(details?.funding_inputs) ? details.funding_inputs : []
-        for (const fundingInput of fundingInputs) {
-          if (typeof fundingInput?.outpoint === 'string' && fundingInput.outpoint !== '') {
-            outpoints.add(fundingInput.outpoint)
-          }
-        }
-      }
-
-      processed += orders.length
-      afterId = orders[orders.length - 1].id
-      if (orders.length < limit) break
-    }
-
-    return outpoints
+    const outpoints = await listPendingBuyOrderFundingOutpoints({
+      db: this.env.DB,
+      limit: PENDING_ORDER_SCAN_LIMIT
+    })
+    return new Set(outpoints)
   }
 
   async #validateMempoolAcceptance({ tx, minFeeRateSatVb }) {

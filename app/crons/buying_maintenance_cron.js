@@ -1,8 +1,7 @@
 import { listPendingBuyOrders, setBuyOrderStatus } from '../models/db/buy_orders.js'
 import { Mempool } from '../models/mempool.js'
+import { refreshFundingWalletState } from '../utils/funding_wallet.js'
 import { safeErrorMessage } from '../utils/logging.js'
-
-const FUNDING_WALLET_NAME = 'funding-wallet'
 
 async function processPendingBuyOrder({ db, order }) {
   try {
@@ -33,19 +32,6 @@ async function processPendingBuyOrder({ db, order }) {
   } catch (error) {
     console.error('processPendingBuyOrder failed', order.id, error)
   }
-}
-
-export async function refreshFundingWalletState(env) {
-  if (!env.FUNDING_WALLET) return
-
-  const id = env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
-  const durableObject = env.FUNDING_WALLET.get(id)
-  const response = await durableObject.fetch('https://funding-wallet/refresh', { method: 'POST' })
-
-  if (response.ok) return
-
-  const data = await response.json().catch(() => ({}))
-  throw new Error(data?.error ? String(data.error) : `Funding wallet refresh failed with status ${response.status}`)
 }
 
 export async function reconcileBuyOrders({ env }) {

@@ -6,7 +6,9 @@ import { getActiveBuyOrderForInscription } from '../../models/db/buy_orders.js'
 import { OrdinalsAPI } from '../../models/ordinals_api.js'
 import { buildGalleryIdSet, matchesInscriptionMetadata } from '../../models/policy_matcher.js'
 import { Mempool } from '../../models/mempool.js'
+import { createId } from '../../utils/create_id.js'
 import { safeErrorMessage } from '../../utils/logging.js'
+import { requestFundingWallet } from '../../utils/funding_wallet.js'
 import { estimateInputSize, estimateOutputSize } from '../../utils/tx_sizes.js'
 import { isValidInscriptionId, normalizeBitcoinAddress } from '../../utils/validation.js'
 
@@ -14,7 +16,6 @@ const BASE_TX_SIZE = 10.5
 const PADDING = 546n
 const PREPARATION_TTL_MS = 60_000
 const MAX_INSCRIPTION_AMOUNT = 10_000n
-const FUNDING_WALLET_NAME = 'funding-wallet'
 const FUNDING_INPUT_START_INDEX = 1
 
 class HttpError extends Error {
@@ -30,18 +31,6 @@ function json(data, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' }
   })
-}
-
-function createId() {
-  if (crypto.randomUUID) return crypto.randomUUID()
-
-  const bytes = new Uint8Array(16)
-  crypto.getRandomValues(bytes)
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-
-  const hexString = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
-  return `${hexString.slice(0, 8)}-${hexString.slice(8, 12)}-${hexString.slice(12, 16)}-${hexString.slice(16, 20)}-${hexString.slice(20)}`
 }
 
 function amountToBigInt(value, label) {
@@ -511,21 +500,14 @@ export class BuyPolicyWorker {
   }
 
   async #fundingRequest(pathname, body = null) {
-    const id = this.env.FUNDING_WALLET.idFromName(FUNDING_WALLET_NAME)
-    const durableObject = this.env.FUNDING_WALLET.get(id)
-
-    const response = await durableObject.fetch(`https://funding-wallet${pathname}`, {
-      method: body ? 'POST' : 'GET',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined
-    })
-
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      throw new HttpError(response.status, data?.error ? String(data.error) : 'Funding wallet request failed', data?.code ?? null)
+    try {
+      return await requestFundingWallet(this.env, pathname, body)
+    } catch (error) {
+      if (typeof error?.status === 'number') {
+        throw new HttpError(error.status, error.message, error.code ?? null)
+      }
+      throw error
     }
-
-    return data
   }
 
   #releaseTrade(tradeId) {

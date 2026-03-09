@@ -1,19 +1,18 @@
 import { withD1Retry } from './d1.js'
+import { createId } from '../../utils/create_id.js'
 
 function nowSeconds() {
   return Math.floor(Date.now() / 1000)
 }
 
-function createId() {
-  if (crypto.randomUUID) return crypto.randomUUID()
-
-  const bytes = new Uint8Array(16)
-  crypto.getRandomValues(bytes)
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+function parseFundingInputs(extraDetails) {
+  try {
+    const details = JSON.parse(extraDetails)
+    const fundingInputs = Array.isArray(details?.funding_inputs) ? details.funding_inputs : []
+    return fundingInputs.map((input) => input?.outpoint).filter(Boolean)
+  } catch {
+    return []
+  }
 }
 
 export async function createBuyOrder({
@@ -116,6 +115,7 @@ export async function setBuyOrderStatus({ db, id, status, txid }) {
 
   return getBuyOrderById({ db, id })
 }
+
 export async function listBuyOrdersByCollection({ db, collectionSlug, limit = 10 }) {
   const result = await withD1Retry(() =>
     db
@@ -145,4 +145,29 @@ export async function countConfirmedBuysByCollection({ db, collectionSlug }) {
   )
 
   return Number(result?.count ?? 0)
+}
+
+export async function listPendingBuyOrderFundingOutpoints({ db, limit = 5000, batchSize = 200 }) {
+  const outpoints = new Set()
+  let afterId = null
+  let processed = 0
+
+  while (processed < limit) {
+    const remaining = limit - processed
+    const batchLimit = Math.min(batchSize, remaining)
+    const orders = await listPendingBuyOrders({ db, limit: batchLimit, afterId })
+    if (orders.length === 0) break
+
+    for (const order of orders) {
+      for (const outpoint of parseFundingInputs(order.extra_details)) {
+        outpoints.add(outpoint)
+      }
+    }
+
+    processed += orders.length
+    afterId = orders[orders.length - 1].id
+    if (orders.length < batchLimit) break
+  }
+
+  return Array.from(outpoints)
 }
