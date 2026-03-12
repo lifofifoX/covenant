@@ -40,7 +40,7 @@ function buildLaunchpadSupply({ collection, parentInscription, availableCount, p
   }
 }
 
-export function renderLaunchpad({ config, launchpad, collection, parentInscription, recentSales, availableCount, pendingCount }) {
+export function renderLaunchpad({ config, launchpad, collection, parentInscription, recentSales, availableCount, pendingCount, whitelistStatus }) {
   return renderPage({
     viewName: 'launchpad.html',
     vars: {
@@ -51,7 +51,8 @@ export function renderLaunchpad({ config, launchpad, collection, parentInscripti
       collection: collection.policy,
       parentInscription,
       recentSales,
-      supply: buildLaunchpadSupply({ collection: collection.policy, parentInscription, availableCount, pendingCount })
+      supply: buildLaunchpadSupply({ collection: collection.policy, parentInscription, availableCount, pendingCount }),
+      whitelistStatus: whitelistStatus ?? null
     }
   })
 }

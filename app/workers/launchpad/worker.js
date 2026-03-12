@@ -1,6 +1,8 @@
 import { Collection } from '../../models/collection.js'
 import { getAvailableInscriptionIds, getAvailableInscriptionMetadata } from '../../models/db/inscriptions.js'
+import { countActiveOrdersByCollectionAndBuyer } from '../../models/db/orders.js'
 import { safeErrorMessage } from '../../utils/logging.js'
+import { resolveLaunchpadWhitelist } from '../../utils/launchpad_whitelist.js'
 import { normalizeOrdinalAddress } from '../../utils/validation.js'
 
 class HttpError extends Error {
@@ -21,6 +23,36 @@ function json(data, status = 200) {
 const RESERVATION_TIMEOUT_MS = 10 * 1000
 const RESERVATION_HISTORY_WINDOW_MS = 5 * 60 * 1000
 const RESERVATION_CACHE_TTL_MS = 2000
+
+async function ensureWhitelistAccess({ db, collectionSlug, collection, buyerOrdinalAddress, nowMs }) {
+  const whitelist = await resolveLaunchpadWhitelist({
+    db,
+    collectionSlug,
+    policy: collection.policy,
+    buyerOrdinalAddress,
+    nowMs
+  })
+  if (whitelist.phase === 'whitelist_upcoming') {
+    throw new HttpError(403, 'Whitelist not started', 'whitelist_upcoming')
+  }
+  if (whitelist.phase !== 'whitelist') return
+
+  if (!whitelist.eligible) {
+    throw new HttpError(403, 'Address not whitelisted', 'not_whitelisted')
+  }
+
+  const cap = Number(whitelist.cap ?? 0)
+  if (!Number.isInteger(cap) || cap <= 0) return
+
+  const activeMintCount = await countActiveOrdersByCollectionAndBuyer({
+    db,
+    collectionSlug,
+    buyerAddress: buyerOrdinalAddress
+  })
+  if (activeMintCount >= cap) {
+    throw new HttpError(403, `Whitelist mint cap reached (${cap})`, 'whitelist_cap_reached')
+  }
+}
 
 class ReservationStore {
   constructor(sql) {
@@ -226,6 +258,14 @@ export class LaunchpadReservationWorker {
     const collection = Collection.lookup(collectionSlug)
     if (!collection.isLaunchpad) throw new HttpError(400, 'Collection is not a launchpad')
 
+    await ensureWhitelistAccess({
+      db: this.env.DB,
+      collectionSlug,
+      collection,
+      buyerOrdinalAddress: normalizedBuyerOrdinalAddress,
+      nowMs: Date.now()
+    })
+
     const reservation = await this.reservationAllocator.reserve({
       collectionSlug,
       buyerOrdinalAddress: normalizedBuyerOrdinalAddress
@@ -255,6 +295,14 @@ export class LaunchpadReservationWorker {
 
     const collection = Collection.lookup(collectionSlug)
     if (!collection.isLaunchpad) throw new HttpError(400, 'Collection is not a launchpad')
+
+    await ensureWhitelistAccess({
+      db: this.env.DB,
+      collectionSlug,
+      collection,
+      buyerOrdinalAddress: normalizedBuyerOrdinalAddress,
+      nowMs: Date.now()
+    })
 
     const reservation = this.sql.exec(
       'SELECT inscription_id, buyer_ordinal_address, expires_at_ms FROM reservations WHERE inscription_id = ?1',
