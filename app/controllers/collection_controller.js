@@ -7,8 +7,61 @@ import { countPendingByCollection, getActiveOrdersForInscriptions, listOrdersByC
 import { countAvailableInscriptions } from '../models/db/inscriptions.js'
 import { parseTurnstileCredentials } from '../utils/turnstile.js'
 import { LAUNCHPAD_CACHE_TTL_SECONDS } from '../utils/launchpad_cache.js'
+import { resolveLaunchpadWhitelist } from '../utils/launchpad_whitelist.js'
 
 const LAUNCHPAD_FRAME_REFRESH_MS = 5000
+
+
+function formatRemaining(ms) {
+  const safe = Math.max(0, Number(ms || 0))
+  const totalSeconds = Math.floor(safe / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  return `${days}d ${hours}h ${minutes}m`
+}
+
+async function buildWhitelistStatus({ db, collection }) {
+  const nowMs = Date.now()
+  const { phase, phaseLabel, whitelist, addressCount } = await resolveLaunchpadWhitelist({
+    db,
+    collectionSlug: collection.slug,
+    policy: collection.policy,
+    buyerOrdinalAddress: null,
+    nowMs
+  })
+
+  if (!whitelist) return null
+
+  const startAt = Number.isFinite(whitelist.startAtMs) ? new Date(whitelist.startAtMs) : null
+  const endAt = Number.isFinite(whitelist.endAtMs) ? new Date(whitelist.endAtMs) : null
+  const active = phase === 'whitelist'
+  const phaseEndsAt = active && endAt ? endAt : null
+  const phaseRemainingMs = phaseEndsAt
+    ? Math.max(0, phaseEndsAt.getTime() - nowMs)
+    : (phase === 'whitelist_upcoming' && startAt ? Math.max(0, startAt.getTime() - nowMs) : null)
+  const phaseRemainingText = phaseRemainingMs != null ? formatRemaining(phaseRemainingMs) : null
+  const whitelistStartsInText = phase === 'whitelist_upcoming' && startAt
+    ? formatRemaining(Math.max(0, startAt.getTime() - nowMs))
+    : null
+  const publicStartsInText = endAt && nowMs < endAt.getTime()
+    ? formatRemaining(Math.max(0, endAt.getTime() - nowMs))
+    : null
+
+  return {
+    active,
+    phase,
+    phaseLabel: phase === 'whitelist_upcoming' ? 'Not live' : phaseLabel,
+    phaseEndsAt,
+    phaseRemainingMs,
+    phaseRemainingText,
+    whitelistStartsInText,
+    publicStartsInText,
+    startAt,
+    endAt,
+    addressCount: Number.isFinite(addressCount) ? addressCount : 0
+  }
+}
 
 function parsePageParam(c) {
   const page = c.req.query('page')
@@ -55,6 +108,7 @@ async function launchpadHandler(c, { collection, db }) {
     countPendingByCollection({ db, collectionSlug: collection.slug })
   ])
   const [turnstileSiteKey] = parseTurnstileCredentials(c.env.TURNSTILE_CREDENTIALS)
+  const whitelistStatus = await buildWhitelistStatus({ db, collection })
 
   const html = renderLaunchpad({
     config: collection.policy,
@@ -63,7 +117,8 @@ async function launchpadHandler(c, { collection, db }) {
     parentInscription,
     recentSales,
     availableCount,
-    pendingCount
+    pendingCount,
+    whitelistStatus
   })
 
   const response = htmlResponse(c, html, {

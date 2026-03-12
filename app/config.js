@@ -1,6 +1,7 @@
 import { parse } from 'yaml'
 import storeYaml from '../config/store.yml'
 import policyYaml from '../config/policy.yml'
+import { normalizeOrdinalAddress } from './utils/validation.js'
 
 function ensureObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -17,6 +18,48 @@ function ensureNonEmptyString(value, label) {
 function ensurePositiveInteger(value, label) {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`Invalid ${label}: expected a positive integer`)
+  }
+}
+
+function ensureOptionalIsoDate(value, label) {
+  if (value === undefined || value === null || value === '') return
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid ${label}: expected an ISO date string`)
+  }
+  const parsed = Date.parse(value)
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Invalid ${label}: expected a valid ISO date string`)
+  }
+}
+
+function validateWhitelist({ whitelist, label }) {
+  if (whitelist === undefined || whitelist === null) return
+
+  ensureObject(whitelist, `${label}.whitelist`)
+
+  const addresses = whitelist.addresses ?? []
+  if (!Array.isArray(addresses)) throw new Error(`Invalid ${label}.whitelist.addresses: expected an array`)
+
+  for (const [aidx, address] of addresses.entries()) {
+    ensureNonEmptyString(address, `${label}.whitelist.addresses[${aidx}]`)
+    const normalized = normalizeOrdinalAddress(address)
+    if (!normalized) {
+      throw new Error(`Invalid ${label}.whitelist.addresses[${aidx}]: invalid ordinal address`)
+    }
+  }
+
+  ensureOptionalIsoDate(whitelist.start_at, `${label}.whitelist.start_at`)
+  ensureOptionalIsoDate(whitelist.end_at, `${label}.whitelist.end_at`)
+  if (whitelist.max_mints_per_address !== undefined && whitelist.max_mints_per_address !== null) {
+    ensurePositiveInteger(whitelist.max_mints_per_address, `${label}.whitelist.max_mints_per_address`)
+  }
+
+  if (whitelist.start_at && whitelist.end_at) {
+    const start = Date.parse(whitelist.start_at)
+    const end = Date.parse(whitelist.end_at)
+    if (start >= end) {
+      throw new Error(`Invalid ${label}.whitelist: start_at must be before end_at`)
+    }
   }
 }
 
@@ -52,6 +95,8 @@ function validateCollectionPolicy({ collection, label, requireMinPostage }) {
       ensureNonEmptyString(p.address, `${label}.optional_payments[${pidx}].address`)
     }
   }
+
+  validateWhitelist({ whitelist: collection.whitelist, label })
 }
 
 function validateStoreConfig(config) {

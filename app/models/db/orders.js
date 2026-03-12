@@ -131,3 +131,18 @@ export async function listOrdersByCollection({ db, collectionSlug, limit = 10 })
   )
   return result.results ?? []
 }
+
+export async function countActiveOrdersByCollectionAndBuyer({ db, collectionSlug, buyerAddress }) {
+  const result = await withD1Retry(() =>
+    db
+      .prepare(
+        `SELECT COUNT(*) as count FROM orders
+         WHERE collection_slug = ?1
+           AND buyer_address = ?2
+           AND status IN ('pending', 'confirmed')`
+      )
+      .bind(collectionSlug, buyerAddress)
+      .first()
+  )
+  return Number(result?.count ?? 0)
+}
